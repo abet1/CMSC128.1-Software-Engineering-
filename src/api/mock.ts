@@ -1,6 +1,6 @@
 import type {
-  Person, ContactGroup, Product, ProductAddon,
-  Rental, Expense, GroupExpenseAllocation, Payment,
+  Person, Product, ProductAddon,
+  Rental, Payment,
 } from '../types';
 
 // ── Persons ───────────────────────────────────────────────────────────────────
@@ -11,13 +11,6 @@ export const mockPersons: Person[] = [
   { id: 'p3', first_name: 'Albert', last_name: 'Caro', phone: '+63 917 555 6666', created_at: '2025-10-03T00:00:00Z', updated_at: '2025-10-03T00:00:00Z' },
   { id: 'p4', first_name: 'Maria', last_name: 'Santos', phone: '+63 917 777 8888', email: 'maria@email.com', created_at: '2025-10-04T00:00:00Z', updated_at: '2025-10-04T00:00:00Z' },
   { id: 'p5', first_name: 'Carlo', last_name: 'Reyes', phone: '+63 917 999 0000', created_at: '2025-10-05T00:00:00Z', updated_at: '2025-10-05T00:00:00Z' },
-];
-
-// ── Groups ────────────────────────────────────────────────────────────────────
-
-export const mockGroups: ContactGroup[] = [
-  { id: 'g1', group_name: 'Friends', members: [mockPersons[0], mockPersons[1], mockPersons[2]], created_at: '2025-10-06T00:00:00Z', updated_at: '2025-10-06T00:00:00Z' },
-  { id: 'g2', group_name: 'Clients', members: [mockPersons[3], mockPersons[4]], created_at: '2025-10-07T00:00:00Z', updated_at: '2025-10-07T00:00:00Z' },
 ];
 
 // ── Product Add-ons ───────────────────────────────────────────────────────────
@@ -79,7 +72,7 @@ export const mockProducts: Product[] = [
 export const mockRentals: Rental[] = [
   // ACTIVE
   {
-    id: 'r1', reference_id: 'DP-807f0', title: 'Wedding shoot rental',
+    id: 'r1', reference_id: 'DP-807f0',
     product_id: 'pr1', product: mockProducts[0],
     renter_person_id: 'p1', renter_person: mockPersons[0],
     num_periods: 3, payment_per_period: 1500, periods_remaining: 2,
@@ -88,7 +81,7 @@ export const mockRentals: Rental[] = [
     created_at: '2026-02-20T00:00:00Z', updated_at: '2026-02-20T00:00:00Z',
   },
   {
-    id: 'r2', reference_id: 'JS-2b9c1', title: 'Corporate event video',
+    id: 'r2', reference_id: 'JS-2b9c1',
     product_id: 'pr3', product: mockProducts[2],
     renter_person_id: 'p2', renter_person: mockPersons[1],
     num_periods: 4, payment_per_period: 6000, periods_remaining: 3,
@@ -98,7 +91,7 @@ export const mockRentals: Rental[] = [
   },
   // OVERDUE
   {
-    id: 'r3', reference_id: 'AC-f3d72', title: 'Travel vlog content',
+    id: 'r3', reference_id: 'AC-f3d72',
     product_id: 'pr5', product: mockProducts[4],
     renter_person_id: 'p3', renter_person: mockPersons[2],
     num_periods: 5, payment_per_period: 2000, periods_remaining: 3,
@@ -108,7 +101,7 @@ export const mockRentals: Rental[] = [
   },
   // COMPLETED
   {
-    id: 'r4', reference_id: 'MS-a1b2c', title: 'Product photography',
+    id: 'r4', reference_id: 'MS-a1b2c',
     product_id: 'pr2', product: mockProducts[1],
     renter_person_id: 'p4', renter_person: mockPersons[3],
     num_periods: 2, payment_per_period: 1600, periods_remaining: 0,
@@ -117,7 +110,7 @@ export const mockRentals: Rental[] = [
     created_at: '2025-11-10T00:00:00Z', updated_at: '2025-11-12T00:00:00Z',
   },
   {
-    id: 'r5', reference_id: 'CR-e4f5g', title: 'YouTube channel B-roll',
+    id: 'r5', reference_id: 'CR-e4f5g',
     product_id: 'pr4', product: mockProducts[3],
     renter_person_id: 'p5', renter_person: mockPersons[4],
     num_periods: 3, payment_per_period: 3600, periods_remaining: 0,
@@ -126,7 +119,7 @@ export const mockRentals: Rental[] = [
     created_at: '2025-11-20T00:00:00Z', updated_at: '2025-11-23T00:00:00Z',
   },
   {
-    id: 'r6', reference_id: 'DP-7c8d9', title: 'Birthday party shoot',
+    id: 'r6', reference_id: 'DP-7c8d9',
     product_id: 'pr1', product: mockProducts[0],
     renter_person_id: 'p1', renter_person: mockPersons[0],
     num_periods: 1, payment_per_period: 500, periods_remaining: 0,
@@ -135,7 +128,7 @@ export const mockRentals: Rental[] = [
     created_at: '2025-12-15T00:00:00Z', updated_at: '2025-12-15T00:00:00Z',
   },
   {
-    id: 'r7', reference_id: 'JS-0e1f2', title: 'Pre-nuptial shoot',
+    id: 'r7', reference_id: 'JS-0e1f2',
     product_id: 'pr3', product: mockProducts[2],
     renter_person_id: 'p2', renter_person: mockPersons[1],
     num_periods: 2, payment_per_period: 3000, periods_remaining: 0,
@@ -144,43 +137,13 @@ export const mockRentals: Rental[] = [
     created_at: '2026-01-05T00:00:00Z', updated_at: '2026-01-06T00:00:00Z',
   },
   {
-    id: 'r8', reference_id: 'MS-3a4b5', title: 'Real estate listing photos',
+    id: 'r8', reference_id: 'MS-3a4b5',
     product_id: 'pr4', product: mockProducts[3],
     renter_person_id: 'p4', renter_person: mockPersons[3],
     num_periods: 1, payment_per_period: 1200, periods_remaining: 0,
     amount_paid: 1200, amount_remaining: 0, period_type: 'DAILY',
     status: 'COMPLETED',
     created_at: '2026-01-20T00:00:00Z', updated_at: '2026-01-20T00:00:00Z',
-  },
-];
-
-// ── Expenses ──────────────────────────────────────────────────────────────────
-
-export const mockAllocations: GroupExpenseAllocation[] = [
-  { id: 'al1', expense_id: 'ex3', person_id: 'p1', person: mockPersons[0], allocated_amount: 600, allocated_percent: 33.33, amount_paid: 600, is_fully_paid: true },
-  { id: 'al2', expense_id: 'ex3', person_id: 'p2', person: mockPersons[1], allocated_amount: 600, allocated_percent: 33.33, amount_paid: 300, is_fully_paid: false },
-  { id: 'al3', expense_id: 'ex3', person_id: 'p3', person: mockPersons[2], allocated_amount: 600, allocated_percent: 33.33, amount_paid: 0, is_fully_paid: false },
-];
-
-export const mockExpenses: Expense[] = [
-  {
-    id: 'ex1', description: 'Grab to client location',
-    amount: 250, renter_person_id: 'p2', renter_person: mockPersons[1],
-    is_group_expense: false, status: 'PAID',
-    created_at: '2026-01-15T00:00:00Z', updated_at: '2026-01-15T00:00:00Z',
-  },
-  {
-    id: 'ex2', description: 'Studio rental for shoot',
-    amount: 3500, renter_person_id: 'p4', renter_person: mockPersons[3],
-    is_group_expense: false, status: 'PENDING',
-    created_at: '2026-02-10T00:00:00Z', updated_at: '2026-02-10T00:00:00Z',
-  },
-  {
-    id: 'ex3', description: 'Team dinner after event',
-    amount: 1800, renter_group_id: 'g1', renter_group: mockGroups[0],
-    is_group_expense: true, payment_allocation_type: 'EQUAL',
-    status: 'PARTIALLY_PAID', allocations: mockAllocations,
-    created_at: '2026-02-18T00:00:00Z', updated_at: '2026-02-18T00:00:00Z',
   },
 ];
 
@@ -200,12 +163,8 @@ export const mockPayments: Payment[] = [
   // Jan 2026
   { id: 'pay9',  payment_date: '2026-01-05', amount: 3000, payee_person_id: 'p2', payee_person: mockPersons[1], period_number: 1, rental_id: 'r7', rental: mockRentals[6], created_at: '2026-01-05T10:00:00Z' },
   { id: 'pay10', payment_date: '2026-01-06', amount: 3000, payee_person_id: 'p2', payee_person: mockPersons[1], period_number: 2, rental_id: 'r7', rental: mockRentals[6], created_at: '2026-01-06T10:00:00Z' },
-  { id: 'pay11', payment_date: '2026-01-15', amount: 250,  payee_person_id: 'p2', payee_person: mockPersons[1], expense_id: 'ex1', expense: mockExpenses[0], created_at: '2026-01-15T10:00:00Z' },
-  { id: 'pay12', payment_date: '2026-01-20', amount: 1200, payee_person_id: 'p4', payee_person: mockPersons[3], period_number: 1, rental_id: 'r8', rental: mockRentals[7], created_at: '2026-01-20T10:00:00Z' },
-  // Feb 2026
-  { id: 'pay13', payment_date: '2026-02-18', amount: 600, payee_person_id: 'p1', payee_person: mockPersons[0], expense_id: 'ex3', group_expense_allocation_id: 'al1', created_at: '2026-02-18T10:00:00Z' },
-  { id: 'pay14', payment_date: '2026-02-18', amount: 300, payee_person_id: 'p2', payee_person: mockPersons[1], expense_id: 'ex3', group_expense_allocation_id: 'al2', created_at: '2026-02-18T12:00:00Z' },
+  { id: 'pay11', payment_date: '2026-01-20', amount: 1200, payee_person_id: 'p4', payee_person: mockPersons[3], period_number: 1, rental_id: 'r8', rental: mockRentals[7], created_at: '2026-01-20T10:00:00Z' },
   // Mar 2026
-  { id: 'pay15', payment_date: '2026-03-01', amount: 1500, payee_person_id: 'p1', payee_person: mockPersons[0], period_number: 1, rental_id: 'r1', rental: mockRentals[0], created_at: '2026-03-01T10:00:00Z' },
-  { id: 'pay16', payment_date: '2026-03-02', amount: 6000, payee_person_id: 'p2', payee_person: mockPersons[1], period_number: 1, rental_id: 'r2', rental: mockRentals[1], created_at: '2026-03-02T10:00:00Z' },
+  { id: 'pay12', payment_date: '2026-03-01', amount: 1500, payee_person_id: 'p1', payee_person: mockPersons[0], period_number: 1, rental_id: 'r1', rental: mockRentals[0], created_at: '2026-03-01T10:00:00Z' },
+  { id: 'pay13', payment_date: '2026-03-02', amount: 6000, payee_person_id: 'p2', payee_person: mockPersons[1], period_number: 1, rental_id: 'r2', rental: mockRentals[1], created_at: '2026-03-02T10:00:00Z' },
 ];

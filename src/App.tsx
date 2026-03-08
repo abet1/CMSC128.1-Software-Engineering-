@@ -8,8 +8,6 @@ import LoginPage               from './pages/LoginPage';
 import DashboardPage           from './pages/DashboardPage';
 import RentalsPage             from './pages/RentalsPage';
 import RentalDetailPage        from './pages/RentalDetailPage';
-import ExpenseDetailPage       from './pages/ExpenseDetailPage';
-import GroupExpenseDetailPage  from './pages/GroupExpenseDetailPage';
 import InventoryPage           from './pages/InventoryPage';
 import PeoplePage              from './pages/PeoplePage';
 import PaymentsPage            from './pages/PaymentsPage';
@@ -28,8 +26,6 @@ export default function App() {
             <Route path="/"                     element={<DashboardPage />} />
             <Route path="/rentals"              element={<RentalsPage />} />
             <Route path="/rentals/:id"          element={<RentalDetailPage />} />
-            <Route path="/expenses/:id"         element={<ExpenseDetailPage />} />
-            <Route path="/group-expenses/:id"   element={<GroupExpenseDetailPage />} />
             <Route path="/inventory"            element={<InventoryPage />} />
             <Route path="/people"               element={<PeoplePage />} />
             <Route path="/payments"             element={<PaymentsPage />} />

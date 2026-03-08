@@ -26,7 +26,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 pb-24 lg:pb-8">
+        <main className="flex-1 pb-32 lg:pb-8">
           {children}
         </main>
       </div>
