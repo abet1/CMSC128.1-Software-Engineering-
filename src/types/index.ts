@@ -1,241 +1,160 @@
-// Enums
-// Transaction Type: Straight Expense (one person, non-installments), Installment Expense (one person, installments), Group Expense (group of people)
-export type TransactionType = 'STRAIGHT_EXPENSE' | 'INSTALLMENT_EXPENSE' | 'GROUP_EXPENSE';
-export type PaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
-// Installment Status: NOT_STARTED (before start date), UNPAID, PAID, SKIPPED (manually skipped), DELINQUENT (past due)
-export type InstallmentStatus = 'NOT_STARTED' | 'UNPAID' | 'PAID' | 'SKIPPED' | 'DELINQUENT';
-export type PaymentFrequency = 'WEEKLY' | 'MONTHLY';
-// For Monthly: day of month (1-28), For Weekly: day of week (0=Sunday to 6=Saturday)
-export type PaymentFrequencyDay = number;
-export type AllocationMethod = 'EQUAL' | 'BY_PERCENT' | 'BY_AMOUNT';
+// ── Enums ────────────────────────────────────────────────────────────────────
 
-// Direction for Straight and Installment Expenses
-export type TransactionDirection = 'LEND' | 'BORROW';
+export type PeriodType      = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+export type RentalStatus    = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
+export type ExpenseStatus   = 'PENDING' | 'PARTIALLY_PAID' | 'PAID';
+export type AllocationMethod = 'EQUAL' | 'PERCENT' | 'AMOUNT';
+export type ProductStatus   = 'AVAILABLE' | 'RENTED' | 'MAINTENANCE';
 
-// Core Entities
+// ── Core Entities ─────────────────────────────────────────────────────────────
+
 export interface Person {
   id: string;
-  name: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  nickname?: string;
   phone?: string;
   email?: string;
-  avatarUrl?: string;
-  notes?: string;
-  createdAt: Date;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface Group {
+export interface ContactGroup {
   id: string;
+  group_name: string;
+  members?: Person[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductAddon {
+  id: string;
+  product_id: string;
   name: string;
-  members: Person[];
-  createdAt: Date;
+  daily_rate: number;
+  weekly_rate?: number;
+  monthly_rate?: number;
 }
 
-export interface GroupMember {
-  groupId: string;
-  contactId: string;
-  joinedAt: Date;
-}
-
-// Transaction - The Main Entry
-export interface Transaction {
+export interface Product {
   id: string;
-  referenceId: string;
-  entryName: string;
+  product_name: string;
+  brand?: string;
+  model?: string;
   description?: string;
-  transactionType: TransactionType;
-  // Direction only applies to STRAIGHT_EXPENSE and INSTALLMENT_EXPENSE (LEND = I lent money, BORROW = I borrowed money)
-  direction?: TransactionDirection;
-  amountBorrowed: number;
-  amountRemaining: number;
-  status: PaymentStatus;
-  dateBorrowed: Date;
-  // Start Date: For installment expenses, this is when installments begin
-  startDate?: Date;
-  // Lender/Borrower: For STRAIGHT_EXPENSE and INSTALLMENT_EXPENSE, one of these will be set
-  // For GROUP_EXPENSE, lenderContactId is the payer (usually current user), borrowerGroupId is the group
-  lenderContactId?: string;
-  borrowerContactId?: string;
-  borrowerGroupId?: string;
-  // Has installments flag (true for INSTALLMENT_EXPENSE)
-  hasInstallments: boolean;
-  notes?: string;
-  createdAt: Date;
+  category?: string;
+  daily_rate: number;
+  weekly_rate?: number;
+  monthly_rate?: number;
+  status: ProductStatus;
+  image_url?: string;
+  addons?: ProductAddon[];
+  created_at: string;
+  updated_at: string;
 }
 
-// Installments
-export interface Installment {
+export interface Rental {
   id: string;
-  transactionId: string;
-  termNumber: number;
-  amountDue: number;
-  amountPaid: number;
-  status: InstallmentStatus;
-  dueDate: Date;
-  paidDate?: Date;
-  notes?: string;
+  reference_id: string;
+  title: string;
+  product_id: string;
+  product?: Product;
+  renter_person_id?: string;
+  renter_group_id?: string;
+  renter_person?: Person;
+  renter_group?: ContactGroup;
+  num_periods: number;
+  payment_per_period: number;
+  periods_remaining: number;
+  amount_paid: number;
+  amount_remaining: number;
+  period_type: PeriodType;
+  status: RentalStatus;
+  rental_channel?: string;
+  proof_of_rental_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface InstallmentPlan {
-  transactionId: string;
-  frequency: PaymentFrequency;
-  // For MONTHLY: day of month (1-28), For WEEKLY: day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
-  paymentDay?: PaymentFrequencyDay;
-  terms: number;
-  amountPerTerm: number;
-  startDate: Date;
-  installments: Installment[];
+export interface GroupExpenseAllocation {
+  id: string;
+  expense_id: string;
+  person_id: string;
+  person?: Person;
+  allocated_amount: number;
+  allocated_percent?: number;
+  amount_paid: number;
+  is_fully_paid: boolean;
 }
 
-// Payments
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  renter_person_id?: string;
+  renter_group_id?: string;
+  renter_person?: Person;
+  renter_group?: ContactGroup;
+  is_group_expense: boolean;
+  payment_allocation_type?: AllocationMethod;
+  status: ExpenseStatus;
+  allocations?: GroupExpenseAllocation[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Payment {
   id: string;
-  transactionId: string;
-  installmentId?: string;
-  paymentDate: Date;
-  paymentAmount: number;
-  // For group expenses, who made the payment
-  payeeContactId?: string;
-  // Optional: Proof of payment (image/blob)
-  proof?: string; // Base64 or URL
-  notes?: string;
-}
-
-// Payment Allocations (for Group Expenses)
-export interface PaymentAllocation {
-  id: string;
-  transactionId: string;
-  payeeContactId: string;
-  description?: string;
+  payment_date: string;
   amount: number;
-  percentageOfTotal?: number;
-  status: PaymentStatus;
+  payee_person_id: string;
+  payee_person?: Person;
+  period_number?: number;
+  proof_url?: string;
   notes?: string;
+  rental_id?: string;
+  rental?: Rental;
+  expense_id?: string;
+  expense?: Expense;
+  group_expense_allocation_id?: string;
+  created_at: string;
 }
 
-// Computed/Display Types
-export interface TransactionWithDetails extends Transaction {
-  lender?: Person;
-  borrower?: Person;
-  group?: Group;
-  payments: Payment[];
-  installmentPlan?: InstallmentPlan;
-  allocations?: PaymentAllocation[];
+// ── Utility Helpers ───────────────────────────────────────────────────────────
+
+export function personFullName(p: Person): string {
+  return [p.first_name, p.middle_name, p.last_name].filter(Boolean).join(' ');
 }
 
-export interface FinancialSummary {
-  totalLent: number;
-  totalBorrowed: number;
-  netBalance: number;
-  pendingReceivables: number;
-  pendingPayables: number;
-  activeTransactions: number;
+export function personInitials(p: Person): string {
+  return `${p.first_name[0]}${p.last_name[0]}`.toUpperCase();
 }
 
-// Utility function to generate reference ID
-export function generateReferenceId(borrowerName: string, lenderName: string): string {
-  const getInitials = (name: string) => 
-    name.split(' ').map(n => n[0]?.toUpperCase() || '').join('').slice(0, 2);
-  
-  const borrowerInitials = getInitials(borrowerName);
-  const lenderInitials = getInitials(lenderName);
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  
-  return `${borrowerInitials}-${lenderInitials}-${random}`;
+export function groupInitials(g: ContactGroup): string {
+  const name = g.group_name;
+  return `${name[0]}${name[name.length - 1]}`.toUpperCase();
 }
 
-// Currency formatter for PHP
-export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-PH', {
+export function rentalProgress(r: Rental): number {
+  if (r.num_periods === 0) return 0;
+  return ((r.num_periods - r.periods_remaining) / r.num_periods) * 100;
+}
+
+export function expenseProgress(e: Expense): number {
+  if (e.amount === 0) return 0;
+  const paid = e.allocations
+    ? e.allocations.reduce((sum, a) => sum + a.amount_paid, 0)
+    : e.amount - (e.amount * (e.status === 'PAID' ? 0 : e.status === 'PENDING' ? 1 : 0.5));
+  return Math.min((paid / e.amount) * 100, 100);
+}
+
+export const formatCurrency = (amount: number): string =>
+  new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
     minimumFractionDigits: 2,
   }).format(amount);
-};
 
-export const formatCurrencyCompact = (amount?: number | null): string => {
-  if (typeof amount !== 'number' || Number.isNaN(amount)) {
-    return '₱0.00';
-  }
-
-  return `₱${amount.toLocaleString('en-PH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-};
-
-
-// Helper function to calculate installment status based on dates and payment status
-export function calculateInstallmentStatus(
-  installment: Installment,
-  planStartDate: Date,
-  currentDate: Date = new Date()
-): InstallmentStatus {
-  // If already paid or skipped, return current status
-  if (installment.status === 'PAID' || installment.status === 'SKIPPED') {
-    return installment.status;
-  }
-
-  // If current date is before plan start date, installment hasn't started yet
-  if (currentDate < planStartDate && installment.termNumber === 1) {
-    return 'NOT_STARTED';
-  }
-
-  // If due date has passed and not paid, it's delinquent
-  if (currentDate > installment.dueDate && installment.amountPaid < installment.amountDue) {
-    return 'DELINQUENT';
-  }
-
-  // If due date hasn't arrived yet, it's unpaid
-  if (currentDate < installment.dueDate) {
-    return 'UNPAID';
-  }
-
-  // Due date has arrived, check payment status
-  if (installment.amountPaid >= installment.amountDue) {
-    return 'PAID';
-  }
-
-  // Due date passed but partially paid or unpaid
-  return currentDate > installment.dueDate ? 'DELINQUENT' : 'UNPAID';
-}
-
-// Helper function to calculate next payment date based on frequency and day
-export function calculateNextPaymentDate(
-  startDate: Date,
-  frequency: PaymentFrequency,
-  paymentDay: PaymentFrequencyDay | undefined,
-  termNumber: number
-): Date {
-  const nextDate = new Date(startDate);
-
-  if (frequency === 'MONTHLY') {
-    // For monthly, add termNumber months and set to paymentDay (1-28)
-    nextDate.setMonth(startDate.getMonth() + termNumber - 1);
-    if (paymentDay !== undefined && paymentDay >= 1 && paymentDay <= 28) {
-      nextDate.setDate(paymentDay);
-    }
-  } else if (frequency === 'WEEKLY') {
-    // For weekly, add termNumber weeks and set to paymentDay (0=Sunday to 6=Saturday)
-    const daysToAdd = (termNumber - 1) * 7;
-    nextDate.setDate(startDate.getDate() + daysToAdd);
-    
-    if (paymentDay !== undefined && paymentDay >= 0 && paymentDay <= 6) {
-      const currentDay = nextDate.getDay();
-      const daysToAdjust = paymentDay - currentDay;
-      nextDate.setDate(nextDate.getDate() + daysToAdjust);
-    }
-  }
-
-  return nextDate;
-}
-
-// Helper functions to check transaction direction
-export function isLendTransaction(transaction: Transaction): boolean {
-  if (transaction.transactionType === 'GROUP_EXPENSE') return false;
-  return transaction.direction === 'LEND';
-}
-
-export function isBorrowTransaction(transaction: Transaction): boolean {
-  if (transaction.transactionType === 'GROUP_EXPENSE') return false;
-  return transaction.direction === 'BORROW';
-}
+export const formatCurrencyCompact = (amount: number): string =>
+  `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
