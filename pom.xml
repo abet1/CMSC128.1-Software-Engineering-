@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.0</version>
         <relativePath/>
     </parent>
-    
-    <groupId>com.example</groupId>
-    <artifactId>project</artifactId>
+
+    <groupId>com.rentaltracker</groupId>
+    <artifactId>rental-tracker</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Loan Tracker</name>
-    <description>Loan Tracking System Backend</description>
-    
+    <name>Rental Tracker</name>
+    <description>Camera Rental and Expense Tracker Backend</description>
+
     <properties>
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-    
+
     <dependencies>
 
         <dependency>
@@ -37,21 +37,21 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
-        
+
         <!-- PostgreSQL Driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-        
+
         <!-- Spring Boot Starter Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -76,8 +76,21 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.3.0</version>
         </dependency>
+
+        <!-- Spring Security -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- OAuth2 Resource Server (JWT validation) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
     </dependencies>
-    
+
     <build>
         <plugins>
             <plugin>
