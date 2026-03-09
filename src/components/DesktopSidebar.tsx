@@ -1,81 +1,60 @@
-import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, FileText, Users, Settings, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { QuickPaymentSheet } from '@/components/QuickPaymentSheet';
-
-const navItems = [
-  { path: '/', label: 'Home', icon: Home },
-  { path: '/records', label: 'Records', icon: FileText },
-  { path: '/people', label: 'People', icon: Users },
-  { path: '/settings', label: 'Settings', icon: Settings },
-];
+import { navItems, isNavActive } from '@/lib/navItems';
 
 export function DesktopSidebar() {
-  const location = useLocation();
-  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  const { pathname } = useLocation();
 
   return (
-    <>
-      <aside className="hidden lg:flex flex-col w-72 h-screen bg-card fixed left-0 top-0 border-r border-border shadow-sm">
-        {/* Logo Section */}
-        <div className="flex items-center justify-center p-6 border-b border-border">
-          <img 
-            src="/PayMama.png" 
-            alt="PayMama" 
-            className="w-full max-w-[200px] h-auto object-contain"
-          />
-        </div>
-
-        {/* Record Payment Button */}
-        <div className="p-4">
-          <button
-            onClick={() => setShowPaymentSheet(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm hover:shadow-md"
-          >
-            <CreditCard className="w-5 h-5" />
-            <span>Record Payment</span>
-          </button>
-        </div>
+    <aside className="hidden lg:flex flex-col w-72 h-screen bg-sidebar fixed left-0 top-0 border-r border-sidebar-border">
+      {/* Logo */}
+      <div className="px-6 py-5 border-b border-sidebar-border">
+        <p className="font-display font-semibold text-foreground text-base leading-tight">Rental Tracker</p>
+        <p className="text-xs text-muted-foreground leading-tight mt-0.5">Camera & Gear</p>
+      </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto scrollbar-hide">
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-3 mb-2">
+          Menu
+        </p>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          
+          const isActive = isNavActive(item.path, pathname);
+
           return (
             <NavLink
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors duration-200",
-                isActive 
-                  ? "bg-primary text-primary-foreground" 
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                isActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
               )}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-4 h-4 shrink-0" />
               <span>{item.label}</span>
+              {isActive && (
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+              )}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-border">
+      {/* User footer */}
+      <div className="px-4 py-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-primary font-bold text-sm">JC</span>
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+            <span className="text-primary text-xs font-bold">A</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-foreground truncate">Josh Cimanes</p>
-            <p className="text-xs text-muted-foreground truncate">josh@email.com</p>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">Admin</p>
+            <p className="text-xs text-muted-foreground truncate">Camera Rental</p>
           </div>
         </div>
       </div>
     </aside>
-    <QuickPaymentSheet open={showPaymentSheet} onOpenChange={setShowPaymentSheet} />
-    </>
   );
 }
