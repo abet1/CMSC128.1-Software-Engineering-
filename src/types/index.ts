@@ -66,8 +66,10 @@ export interface Rental {
 
 export interface Payment {
   id: string;
-  payment_date: string;
-  amount: number;
+
+  // backend-style
+  payment_date?: string;
+  amount?: number;
   payee_person_id: string;
   payee_person?: Person;
   period_number?: number;
@@ -75,7 +77,124 @@ export interface Payment {
   notes?: string;
   rental_id?: string;
   rental?: Rental;
+  expense_id?: string;
+  expense?: Expense;
+  created_at?: string;
+
+  // frontend helpers / camelCase
+  transactionId?: string;
+  paymentAmount?: number;
+  paymentDate?: string | Date;
+  installmentId?: string;
+}
+
+export interface GroupExpenseAllocation {
+  id: string;
+  expense_id?: string;
+  person_id?: string;
+  person?: Person;
+  allocated_amount: number;
+  allocated_percent?: number;
+  amount_paid: number;
+  is_fully_paid?: boolean;
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  status: 'PAID' | 'PARTIALLY_PAID' | 'PENDING';
   created_at: string;
+  is_group_expense: boolean;
+  renter_person_id?: string;
+  renter_person?: Person;
+  renter_group?: { id: string; group_name: string };
+  allocations?: GroupExpenseAllocation[];
+  payment_allocation_type?: string;
+  amount_paid?: number;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  members: { id: string; name: string; phone?: string }[];
+}
+
+export type TransactionType = 'LEND' | 'BORROW' | 'GROUP_EXPENSE' | 'STRAIGHT_EXPENSE' | 'INSTALLMENT_EXPENSE';
+export type PaymentFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+export type InstallmentStatus = 'PENDING' | 'PAID' | 'SKIPPED';
+export type TransactionDirection = 'IN' | 'OUT';
+
+export interface Transaction {
+  id: string;
+  entryName?: string;
+  referenceId?: string;
+  amount?: number;
+  amountBorrowed?: number;
+  amountRemaining?: number;
+  borrowerContactId?: string;
+  borrowerGroupId?: string | null;
+  lenderContactId?: string | null;
+  transactionType?: TransactionType;
+  status?: string;
+  dateBorrowed?: string;
+  [key: string]: any;
+}
+
+export interface PaymentAllocation {
+  id: string;
+  transactionId: string;
+  personId: string;
+  allocated_amount: number;
+  allocated_percent?: number;
+  amount_paid: number;
+  is_fully_paid?: boolean;
+  person?: Person;
+}
+
+export interface Installment {
+  id: string;
+  dueDate: string;
+  amountDue: number;
+  amountPaid: number;
+  status: InstallmentStatus;
+  paidDate?: string;
+}
+
+export interface InstallmentPlan {
+  transactionId: string;
+  installments: Installment[];
+}
+
+export function expenseProgress(expense: Expense): number {
+  if (!expense) return 0;
+  if (expense.status === 'PAID') return 100;
+  if (expense.status === 'PENDING') return 0;
+  if (expense.amount === 0) return 0;
+  if (expense.amount_paid != null) {
+    return Math.min((expense.amount_paid / expense.amount) * 100, 100);
+  }
+  if (expense.allocations) {
+    const paid = expense.allocations.reduce((sum, a) => sum + (a.amount_paid || 0), 0);
+    return Math.min((paid / expense.amount) * 100, 100);
+  }
+  return 0;
+}
+
+export function isLendTransaction(t: Transaction): boolean {
+  return t.transactionType === 'LEND' || t.transactionType === 'STRAIGHT_EXPENSE';
+}
+
+export function isBorrowTransaction(t: Transaction): boolean {
+  return t.transactionType === 'BORROW' || t.transactionType === 'INSTALLMENT_EXPENSE';
+}
+
+export function calculateNextPaymentDate(current: string, frequency: PaymentFrequency): string {
+  const d = new Date(current);
+  if (frequency === 'DAILY') d.setDate(d.getDate() + 1);
+  else if (frequency === 'WEEKLY') d.setDate(d.getDate() + 7);
+  else if (frequency === 'MONTHLY') d.setMonth(d.getMonth() + 1);
+  return d.toISOString().split('T')[0];
 }
 
 // ── Utility Helpers ───────────────────────────────────────────────────────────
@@ -102,3 +221,15 @@ export const formatCurrency = (amount: number): string =>
 
 export const formatCurrencyCompact = (amount: number): string =>
   `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export const calculateInstallmentStatus = (installment: any, startDate?: any) => {
+  if (installment.amountPaid >= installment.amountDue) return 'PAID';
+  if (installment.status === 'SKIPPED') return 'SKIPPED';
+  
+  const dueDate = new Date(installment.dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to start of day
+  
+  if (dueDate < today) return 'OVERDUE';
+  return 'UNPAID';
+};
