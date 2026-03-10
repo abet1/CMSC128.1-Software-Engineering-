@@ -1,6 +1,7 @@
 import type {
   Person, Product, ProductAddon,
   Rental, Payment,
+  Expense, GroupExpenseAllocation,
 } from '../types';
 
 // ── Persons ───────────────────────────────────────────────────────────────────
@@ -147,10 +148,44 @@ export const mockRentals: Rental[] = [
   },
 ];
 
+// ── Expenses (mock data for UI development)
+export const mockExpenses: Expense[] = [
+  {
+    id: 'exp1',
+    description: 'Office supplies',
+    amount: 1200,
+    status: 'PAID',
+    created_at: '2026-02-15T00:00:00Z',
+    is_group_expense: false,
+    renter_person_id: 'p1',
+    renter_person: mockPersons[0],
+    amount_paid: 1200,
+  },
+  {
+    id: 'exp2',
+    description: 'Team lunch',
+    amount: 4500,
+    status: 'PARTIALLY_PAID',
+    created_at: '2026-02-20T00:00:00Z',
+    is_group_expense: true,
+    renter_group: { id: 'g1', group_name: 'Team A' },
+    allocations: [
+      { id: 'a1', expense_id: 'exp2', person_id: 'p1', person: mockPersons[0], allocated_amount: 1500, amount_paid: 500, is_fully_paid: false, allocated_percent: 33.33 },
+      { id: 'a2', expense_id: 'exp2', person_id: 'p2', person: mockPersons[1], allocated_amount: 1500, amount_paid: 1500, is_fully_paid: true, allocated_percent: 33.33 },
+      { id: 'a3', expense_id: 'exp2', person_id: 'p3', person: mockPersons[2], allocated_amount: 1500, amount_paid: 0, is_fully_paid: false, allocated_percent: 33.33 },
+    ],
+    payment_allocation_type: 'EQUAL',
+  },
+];
+
+
 // ── Payments ──────────────────────────────────────────────────────────────────
 
 export const mockPayments: Payment[] = [
   // Nov 2025
+  // example expense payments
+  { id: 'exp_pay1', payment_date: '2026-02-16', amount: 1200, payee_person_id: 'p1', payee_person: mockPersons[0], expense_id: 'exp1', expense: mockExpenses[0], created_at: '2026-02-16T10:00:00Z' },
+  { id: 'exp_pay2', payment_date: '2026-02-21', amount: 500, payee_person_id: 'p1', payee_person: mockPersons[0], expense_id: 'exp2', expense: mockExpenses[1], created_at: '2026-02-21T10:00:00Z' },
   { id: 'pay1', payment_date: '2025-11-10', amount: 1600, payee_person_id: 'p4', payee_person: mockPersons[3], period_number: 1, rental_id: 'r4', rental: mockRentals[3], created_at: '2025-11-10T10:00:00Z' },
   { id: 'pay2', payment_date: '2025-11-12', amount: 1600, payee_person_id: 'p4', payee_person: mockPersons[3], period_number: 2, rental_id: 'r4', rental: mockRentals[3], created_at: '2025-11-12T10:00:00Z' },
   { id: 'pay3', payment_date: '2025-11-20', amount: 3600, payee_person_id: 'p5', payee_person: mockPersons[4], period_number: 1, rental_id: 'r5', rental: mockRentals[4], created_at: '2025-11-20T10:00:00Z' },

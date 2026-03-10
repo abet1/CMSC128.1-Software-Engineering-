@@ -1,7 +1,8 @@
-import { LayoutDashboard, CalendarDays, Package, Users, CreditCard } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Package, Users, CreditCard, BarChart3 } from 'lucide-react';
 
 export const navItems = [
   { path: '/',          label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3 }, // <-- YOUR NEW TAB IS HERE
   { path: '/rentals',   label: 'Rentals',   icon: CalendarDays },
   { path: '/inventory', label: 'Inventory', icon: Package },
   { path: '/people',    label: 'People',    icon: Users },
@@ -13,5 +14,6 @@ export function isNavActive(itemPath: string, pathname: string): boolean {
 }
 
 export function activeNavLabel(pathname: string): string {
-  return navItems.find(item => isNavActive(item.path, pathname))?.label ?? 'Rental Tracker';
+  // Updated the fallback name from 'Rental Tracker' to your actual project name
+  return navItems.find(item => isNavActive(item.path, pathname))?.label ?? 'PayMama'; 
 }

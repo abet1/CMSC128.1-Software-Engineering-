@@ -23,16 +23,19 @@ const Index = () => {
     let activeTransactions = 0;
 
     transactions.forEach((t) => {
+      const amtBorrowed = t.amountBorrowed ?? 0;
+      const amtRemaining = t.amountRemaining ?? 0;
+
       if (t.transactionType === 'GROUP_EXPENSE') {
         // Group expenses are typically receivables (others owe me)
-        totalLent += t.amountBorrowed;
-        pendingReceivables += t.amountRemaining;
+        totalLent += amtBorrowed;
+        pendingReceivables += amtRemaining;
       } else if (isLendTransaction(t)) {
-        totalLent += t.amountBorrowed;
-        pendingReceivables += t.amountRemaining;
+        totalLent += amtBorrowed;
+        pendingReceivables += amtRemaining;
       } else if (isBorrowTransaction(t)) {
-        totalBorrowed += t.amountBorrowed;
-        pendingPayables += t.amountRemaining;
+        totalBorrowed += amtBorrowed;
+        pendingPayables += amtRemaining;
       }
       
       if (t.status !== 'PAID') {
@@ -68,8 +71,8 @@ const Index = () => {
           id: payment.id,
           type: 'payment',
           description: `Payment for ${transaction.entryName}`,
-          amount: payment.paymentAmount,
-          date: payment.paymentDate,
+          amount: payment.paymentAmount ?? payment.amount ?? 0,
+          date: payment.paymentDate ? new Date(payment.paymentDate) : (payment.payment_date ? new Date(payment.payment_date) : new Date()),
           isPositive,
         });
       }
@@ -180,16 +183,42 @@ const Index = () => {
   ];
 
   return (
-    <AppLayout title="Dashboard" showHeader={true}>
+    <AppLayout>
       <div className="px-4 lg:px-8 py-4 lg:py-6">
         <div className="max-w-7xl mx-auto space-y-5 lg:space-y-8">
-          {/* Balance Card - Hero Section */}
-          <div className="animate-fade-in -mt-2 lg:mt-0">
-            <BalanceCard 
-              netBalance={summary.netBalance}
-              pendingReceivables={summary.pendingReceivables}
-              pendingPayables={summary.pendingPayables}
-            />
+      {/* Explicit Value Containers - Clickable to Analytics */}
+          <div className="animate-fade-in -mt-2 lg:mt-0 grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
+            {/* Net Balance */}
+            <div 
+              onClick={() => navigate('/analytics')}
+              className="bg-card p-5 lg:p-6 rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 hover:shadow-md transition-all active:scale-95"
+            >
+              <p className="text-xs lg:text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Net Balance</p>
+              <h2 className={cn(
+                "text-2xl lg:text-3xl font-bold font-display",
+                summary.netBalance >= 0 ? "text-foreground" : "text-destructive"
+              )}>
+                {summary.netBalance >= 0 ? '+' : ''}{formatCurrencyCompact(summary.netBalance)}
+              </h2>
+            </div>
+
+            {/* Pending Receivables */}
+            <div 
+              onClick={() => navigate('/analytics')}
+              className="bg-success/5 p-5 lg:p-6 rounded-xl border border-success/20 cursor-pointer hover:border-success/50 hover:shadow-md transition-all active:scale-95"
+            >
+              <p className="text-xs lg:text-sm font-semibold text-success uppercase tracking-wide mb-1.5">Receivables (Lent)</p>
+              <h2 className="text-2xl lg:text-3xl font-bold font-display text-success">{formatCurrencyCompact(summary.pendingReceivables)}</h2>
+            </div>
+
+            {/* Pending Payables */}
+            <div 
+              onClick={() => navigate('/analytics')}
+              className="bg-destructive/5 p-5 lg:p-6 rounded-xl border border-destructive/20 cursor-pointer hover:border-destructive/50 hover:shadow-md transition-all active:scale-95"
+            >
+              <p className="text-xs lg:text-sm font-semibold text-destructive uppercase tracking-wide mb-1.5">Payables (Borrowed)</p>
+              <h2 className="text-2xl lg:text-3xl font-bold font-display text-destructive">{formatCurrencyCompact(summary.pendingPayables)}</h2>
+            </div>
           </div>
 
           {/* Quick Actions - Floating Style */}

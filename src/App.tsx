@@ -11,6 +11,8 @@ import RentalDetailPage        from './pages/RentalDetailPage';
 import InventoryPage           from './pages/InventoryPage';
 import PeoplePage              from './pages/PeoplePage';
 import PaymentsPage            from './pages/PaymentsPage';
+// NEW: Import your Analytics page
+import Analytics               from './pages/Analytics'; 
 
 const queryClient = new QueryClient();
 
@@ -24,6 +26,10 @@ export default function App() {
           <Routes>
             <Route path="/login"                element={<LoginPage />} />
             <Route path="/"                     element={<DashboardPage />} />
+            
+            {/* NEW: Analytics Route */}
+            <Route path="/analytics"            element={<Analytics />} /> 
+            
             <Route path="/rentals"              element={<RentalsPage />} />
             <Route path="/rentals/:id"          element={<RentalDetailPage />} />
             <Route path="/inventory"            element={<InventoryPage />} />
