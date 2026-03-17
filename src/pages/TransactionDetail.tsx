@@ -111,9 +111,14 @@ const TransactionDetail = () => {
           </div>
         </div>
 
-        <div className="px-4 lg:px-6 lg:py-8 py-6 space-y-6 lg:space-y-8">
+        {/* Desktop: two-column layout; mobile: single column */}
+        <div className="px-4 lg:px-8 py-6 lg:py-8 lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
+
+          {/* ── LEFT column ── */}
+          <div className="space-y-5 lg:space-y-6">
+
           {/* Amount Card */}
-          <div className="bg-card rounded-2xl lg:rounded-3xl p-6 lg:p-8 border border-border/50 shadow-soft animate-fade-in">
+          <div className="bg-card rounded-2xl lg:rounded-2xl p-6 lg:p-8 border border-border/50 shadow-soft animate-fade-in">
             <div className="text-center mb-5 lg:mb-6">
               <p className="text-sm lg:text-base text-muted-foreground mb-2 lg:mb-3">
                 {transaction.status === 'PAID' ? 'Total Amount' : 'Amount Remaining'}
@@ -220,11 +225,16 @@ const TransactionDetail = () => {
 
           {/* Description */}
           {transaction.description && (
-            <div className="p-4 lg:p-5 rounded-xl lg:rounded-2xl bg-card border border-border/50 shadow-soft animate-fade-in stagger-2">
+            <div className="p-4 lg:p-5 rounded-xl bg-card border border-border/50 shadow-soft animate-fade-in stagger-2">
               <p className="text-xs lg:text-sm text-muted-foreground mb-2">Description</p>
               <p className="text-foreground lg:text-base">{transaction.description}</p>
             </div>
           )}
+
+          </div>{/* end LEFT column */}
+
+          {/* ── RIGHT column ── */}
+          <div className="space-y-5 lg:space-y-6">
 
           {/* Installments */}
           {transactionWithDetails.installmentPlan && (
@@ -351,24 +361,26 @@ const TransactionDetail = () => {
 
           {/* Action Buttons */}
           {transaction.status !== 'PAID' && (
-            <div className="flex gap-3 lg:gap-4 animate-fade-in stagger-5 pb-4">
-              <button 
+            <div className="flex gap-3 animate-fade-in stagger-5">
+              <button
                 onClick={() => navigate(`/payment/${transaction.id}`)}
-                className="flex-1 py-4 lg:py-5 rounded-xl lg:rounded-2xl bg-primary text-primary-foreground font-semibold lg:text-lg shadow-maya hover:shadow-maya-lg transition-all active:scale-[0.98]"
+                className="flex-1 py-3.5 lg:py-4 rounded-xl bg-primary text-primary-foreground font-semibold transition-all active:scale-[0.98] hover:bg-primary/90"
               >
                 Record Payment
               </button>
               {transaction.hasInstallments && transactionWithDetails.installmentPlan && (
-                <button 
+                <button
                   onClick={handleSkipTerm}
-                  className="py-4 lg:py-5 px-5 lg:px-6 rounded-xl lg:rounded-2xl bg-card border border-border text-foreground font-semibold lg:text-base hover:bg-muted transition-all active:scale-[0.98]"
+                  className="py-3.5 lg:py-4 px-5 rounded-xl bg-card border border-border text-foreground font-semibold hover:bg-muted transition-all active:scale-[0.98]"
                 >
                   Skip Term
                 </button>
               )}
             </div>
           )}
-        </div>
+
+          </div>{/* end RIGHT column */}
+        </div>{/* end two-column grid */}
       </div>
     </AppLayout>
   );

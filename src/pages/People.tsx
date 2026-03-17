@@ -44,43 +44,28 @@ const contacts = person.filter(p => p.id !== currentUser.id);
   return (
     <AppLayout title="People">
       <div className="px-4 lg:px-8 py-4 lg:py-6">
-        <div className="max-w-6xl mx-auto space-y-6 lg:space-y-8">
-        {/* Mobile Title */}
-        <div className="lg:hidden flex items-center justify-between animate-fade-in">
-          <h1 className="font-display text-2xl font-bold text-foreground">People</h1>
-          <button 
-            onClick={() => navigate(tab === 'contacts' ? '/contacts/add' : '/groups/add')}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-maya hover:shadow-maya-lg transition-all active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            {tab === 'contacts' ? 'Add' : 'Create'}
-          </button>
-        </div>
+        <div className="max-w-6xl mx-auto space-y-5 lg:space-y-6">
 
-          {/* Desktop Add Buttons */}
-          <div className="hidden lg:flex justify-end gap-3 animate-fade-in">
-            {tab === 'contacts' && (
-              <button 
-                onClick={() => navigate('/contacts/add')}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-maya hover:shadow-maya-lg transition-all active:scale-95"
-              >
-                <Plus className="w-5 h-5" />
-                Add Contact
-              </button>
-            )}
-            {tab === 'groups' && (
-              <button 
-                onClick={() => navigate('/groups/add')}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-maya hover:shadow-maya-lg transition-all active:scale-95"
-              >
-                <Plus className="w-5 h-5" />
-                Create Group
-              </button>
-            )}
+          {/* Header row — mobile: title + add; desktop: title + count + add */}
+          <div className="flex items-center justify-between animate-fade-in">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-foreground">People</h1>
+              <p className="hidden lg:block text-sm text-muted-foreground mt-0.5">
+                {tab === 'contacts' ? `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}` : `${groups.length} group${groups.length !== 1 ? 's' : ''}`}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate(tab === 'contacts' ? '/contacts/add' : '/groups/add')}
+              className="flex items-center gap-1.5 lg:gap-2 px-4 lg:px-5 py-2.5 lg:py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-all active:scale-95 hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{tab === 'contacts' ? 'Add Contact' : 'Create Group'}</span>
+            </button>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-muted rounded-xl lg:rounded-2xl animate-fade-in stagger-1">
+          {/* Tabs + Search — side by side on desktop */}
+          <div className="lg:flex lg:items-center lg:gap-4 space-y-3 lg:space-y-0 animate-fade-in stagger-1">
+          <div className="flex gap-1 p-1 bg-muted rounded-xl lg:w-64 lg:shrink-0">
             <button
               onClick={() => setTab('contacts')}
               className={cn(
@@ -107,15 +92,15 @@ const contacts = person.filter(p => p.id !== currentUser.id);
             </button>
           </div>
 
-          {/* Search */}
-          <div className="relative animate-fade-in stagger-2">
+          {/* Search — desktop: grows to fill remaining tab row space */}
+          <div className="relative lg:flex-1">
             <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
               placeholder={tab === 'contacts' ? "Search contacts..." : "Search groups..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-3.5 rounded-xl lg:rounded-2xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm lg:text-base"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all text-sm"
             />
             {search && (
               <button 
@@ -126,6 +111,7 @@ const contacts = person.filter(p => p.id !== currentUser.id);
               </button>
             )}
           </div>
+          </div>{/* end tabs+search row */}
 
           {/* Contacts List */}
           {tab === 'contacts' && (

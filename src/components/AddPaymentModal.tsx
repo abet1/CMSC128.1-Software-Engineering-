@@ -5,7 +5,7 @@ import { formatCurrencyCompact } from '@/types';
 interface AddPaymentModalProps {
   open: boolean;
   onClose: () => void;
-  type: 'rental' | 'expense';
+  type: 'loan' | 'expense';
   fixedAmount?: number;
   onSubmit: (amount: number, notes?: string) => void;
 }
@@ -24,7 +24,7 @@ export function AddPaymentModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const resolvedAmount = type === 'rental' && fixedAmount != null
+    const resolvedAmount = type === 'loan' && fixedAmount != null
       ? fixedAmount
       : parseFloat(amount);
     if (isNaN(resolvedAmount) || resolvedAmount <= 0) return;
@@ -49,7 +49,7 @@ export function AddPaymentModal({
         <h2 className="text-base font-semibold text-foreground">Add Payment</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {type === 'rental' && fixedAmount != null ? (
+          {type === 'loan' && fixedAmount != null ? (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Amount (fixed)
@@ -58,7 +58,7 @@ export function AddPaymentModal({
                 {formatCurrencyCompact(fixedAmount)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Rental payments must be full amount
+                Loan payments must be the full term amount
               </p>
             </div>
           ) : (

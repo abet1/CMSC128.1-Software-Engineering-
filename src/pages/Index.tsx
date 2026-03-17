@@ -186,8 +186,8 @@ const Index = () => {
     <AppLayout>
       <div className="px-4 lg:px-8 py-4 lg:py-6">
         <div className="max-w-7xl mx-auto space-y-5 lg:space-y-8">
-      {/* Explicit Value Containers - Clickable to Analytics */}
-          <div className="animate-fade-in -mt-2 lg:mt-0 grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
+      {/* Balance Cards */}
+          <div className="animate-fade-in -mt-2 lg:mt-0 grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-5">
             {/* Net Balance */}
             <div 
               onClick={() => navigate('/analytics')}
@@ -221,8 +221,8 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Quick Actions - Floating Style */}
-          <div className="animate-fade-in stagger-1 -mx-1">
+          {/* Quick Actions — hidden on desktop (sidebar has these) */}
+          <div className="animate-fade-in stagger-1 -mx-1 lg:hidden">
             <QuickActions />
           </div>
 
@@ -318,9 +318,9 @@ const Index = () => {
           </div>
 
           {/* Two Column Layout for Desktop */}
-          <div className="lg:grid lg:grid-cols-5 lg:gap-6 xl:gap-8 space-y-6 lg:space-y-0">
+          <div className="lg:grid lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px] lg:gap-6 xl:gap-8 space-y-6 lg:space-y-0">
             {/* Active Transactions */}
-            <section className="lg:col-span-3 animate-fade-in stagger-3">
+            <section className="animate-fade-in stagger-3">
               <div className="flex items-center justify-between mb-4 lg:mb-5 px-1">
                 <div className="flex items-center gap-2.5">
                   <div className="w-1 h-5 rounded-full bg-gradient-to-b from-primary to-primary/50" />
@@ -351,7 +351,7 @@ const Index = () => {
           </section>
 
           {/* Recent Activity */}
-          <section className="lg:col-span-2 animate-fade-in stagger-4">
+          <section className="animate-fade-in stagger-4">
             <div className="bg-card rounded-xl lg:rounded-2xl p-4 lg:p-6 border border-border shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4 lg:mb-5">
                 <div className="flex items-center gap-2.5">

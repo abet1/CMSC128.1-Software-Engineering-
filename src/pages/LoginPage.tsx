@@ -1,4 +1,4 @@
-import { Camera } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 export default function LoginPage() {
   return (
@@ -6,11 +6,11 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-            <Camera className="w-8 h-8 text-primary" />
+          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
+            <TrendingUp className="w-7 h-7 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Rental Tracker</h1>
-          <p className="text-sm text-muted-foreground mt-1">Camera & Gear Management</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">LoanTracker</h1>
+          <p className="text-sm text-muted-foreground mt-1">Loans & Expenses</p>
         </div>
 
         {/* Card */}
@@ -20,9 +20,8 @@ export default function LoginPage() {
 
           <button
             onClick={() => {/* supabase.auth.signInWithOAuth({ provider: 'google' }) */}}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-surface hover:border-primary/30 transition-all duration-150"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-secondary hover:border-primary/30 transition-all duration-150"
           >
-            {/* Google icon */}
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

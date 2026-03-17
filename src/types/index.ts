@@ -1,129 +1,35 @@
-// ── Enums ────────────────────────────────────────────────────────────────────
+// ── Loan tracker enums ────────────────────────────────────────────────────────
 
-export type PeriodType    = 'DAILY' | 'WEEKLY' | 'MONTHLY';
-export type RentalStatus  = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
-export type ProductStatus = 'AVAILABLE' | 'RENTED' | 'MAINTENANCE';
+export type TransactionType      = 'LEND' | 'BORROW' | 'GROUP_EXPENSE' | 'STRAIGHT_EXPENSE' | 'INSTALLMENT_EXPENSE';
+export type PaymentFrequency     = 'WEEKLY' | 'MONTHLY' | 'ANNUALLY';
+export type InstallmentStatus    = 'PENDING' | 'PAID' | 'SKIPPED';
+export type TransactionDirection = 'IN' | 'OUT';
+export type PaymentStatus        = 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
 
-// ── Core Entities ─────────────────────────────────────────────────────────────
+// ── Core entities ─────────────────────────────────────────────────────────────
 
 export interface Person {
   id: string;
-  first_name: string;
+  // Loan-tracker fields (primary)
+  name?: string;
+  createdAt?: Date | string;
+  // Rental-tracker / backend fields (kept for compatibility)
+  first_name?: string;
   middle_name?: string;
-  last_name: string;
+  last_name?: string;
   nickname?: string;
   phone?: string;
   email?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProductAddon {
-  id: string;
-  product_id: string;
-  name: string;
-  daily_rate: number;
-  weekly_rate?: number;
-  monthly_rate?: number;
-}
-
-export interface Product {
-  id: string;
-  product_name: string;
-  brand?: string;
-  model?: string;
-  description?: string;
-  category?: string;
-  daily_rate: number;
-  weekly_rate?: number;
-  monthly_rate?: number;
-  status: ProductStatus;
-  image_url?: string;
-  addons?: ProductAddon[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Rental {
-  id: string;
-  reference_id: string;
-  product_id: string;
-  product?: Product;
-  renter_person_id: string;
-  renter_person?: Person;
-  num_periods: number;
-  payment_per_period: number;
-  periods_remaining: number;
-  amount_paid: number;
-  amount_remaining: number;
-  period_type: PeriodType;
-  status: RentalStatus;
-  rental_channel?: string;
-  proof_of_rental_url?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Payment {
-  id: string;
-
-  // backend-style
-  payment_date?: string;
-  amount?: number;
-  payee_person_id: string;
-  payee_person?: Person;
-  period_number?: number;
-  proof_url?: string;
-  notes?: string;
-  rental_id?: string;
-  rental?: Rental;
-  expense_id?: string;
-  expense?: Expense;
   created_at?: string;
-
-  // frontend helpers / camelCase
-  transactionId?: string;
-  paymentAmount?: number;
-  paymentDate?: string | Date;
-  installmentId?: string;
-}
-
-export interface GroupExpenseAllocation {
-  id: string;
-  expense_id?: string;
-  person_id?: string;
-  person?: Person;
-  allocated_amount: number;
-  allocated_percent?: number;
-  amount_paid: number;
-  is_fully_paid?: boolean;
-}
-
-export interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  status: 'PAID' | 'PARTIALLY_PAID' | 'PENDING';
-  created_at: string;
-  is_group_expense: boolean;
-  renter_person_id?: string;
-  renter_person?: Person;
-  renter_group?: { id: string; group_name: string };
-  allocations?: GroupExpenseAllocation[];
-  payment_allocation_type?: string;
-  amount_paid?: number;
+  updated_at?: string;
 }
 
 export interface Group {
   id: string;
   name: string;
   members: { id: string; name: string; phone?: string }[];
+  createdAt?: Date | string;
 }
-
-export type TransactionType = 'LEND' | 'BORROW' | 'GROUP_EXPENSE' | 'STRAIGHT_EXPENSE' | 'INSTALLMENT_EXPENSE';
-export type PaymentFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
-export type InstallmentStatus = 'PENDING' | 'PAID' | 'SKIPPED';
-export type TransactionDirection = 'IN' | 'OUT';
 
 export interface Transaction {
   id: string;
@@ -138,7 +44,34 @@ export interface Transaction {
   transactionType?: TransactionType;
   status?: string;
   dateBorrowed?: string;
+  paymentFrequency?: PaymentFrequency;
+  numberOfTerms?: number;
+  notes?: string;
+  loanChannel?: string;
+  proofUrl?: string;
+  createdAt?: string;
   [key: string]: any;
+}
+
+export interface Payment {
+  id: string;
+  // Loan-tracker fields
+  transactionId?: string;
+  paymentAmount?: number;
+  paymentDate?: string | Date;
+  payeeId?: string;
+  installmentId?: string;
+  proofUrl?: string;
+  notes?: string;
+  // Rental-tracker / backend fields (kept for compatibility)
+  payment_date?: string;
+  amount?: number;
+  payee_person_id?: string;
+  payee_person?: Person;
+  period_number?: number;
+  rental_id?: string;
+  expense_id?: string;
+  created_at?: string;
 }
 
 export interface PaymentAllocation {
@@ -166,20 +99,33 @@ export interface InstallmentPlan {
   installments: Installment[];
 }
 
-export function expenseProgress(expense: Expense): number {
-  if (!expense) return 0;
-  if (expense.status === 'PAID') return 100;
-  if (expense.status === 'PENDING') return 0;
-  if (expense.amount === 0) return 0;
-  if (expense.amount_paid != null) {
-    return Math.min((expense.amount_paid / expense.amount) * 100, 100);
-  }
-  if (expense.allocations) {
-    const paid = expense.allocations.reduce((sum, a) => sum + (a.amount_paid || 0), 0);
-    return Math.min((paid / expense.amount) * 100, 100);
-  }
-  return 0;
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  status: 'PAID' | 'PARTIALLY_PAID' | 'PENDING';
+  created_at: string;
+  is_group_expense: boolean;
+  renter_person_id?: string;
+  renter_person?: Person;
+  renter_group?: { id: string; group_name: string };
+  allocations?: GroupExpenseAllocation[];
+  payment_allocation_type?: string;
+  amount_paid?: number;
 }
+
+export interface GroupExpenseAllocation {
+  id: string;
+  expense_id?: string;
+  person_id?: string;
+  person?: Person;
+  allocated_amount: number;
+  allocated_percent?: number;
+  amount_paid: number;
+  is_fully_paid?: boolean;
+}
+
+// ── Loan-tracker helpers ──────────────────────────────────────────────────────
 
 export function isLendTransaction(t: Transaction): boolean {
   return t.transactionType === 'LEND' || t.transactionType === 'STRAIGHT_EXPENSE';
@@ -189,27 +135,55 @@ export function isBorrowTransaction(t: Transaction): boolean {
   return t.transactionType === 'BORROW' || t.transactionType === 'INSTALLMENT_EXPENSE';
 }
 
+export function generateReferenceId(borrowerName: string, lenderName: string, uuid: string): string {
+  const initials = (name: string): string => {
+    const words = name.trim().split(/\s+/);
+    if (words.length === 1) return `${name[0]}${name[name.length - 1]}`.toUpperCase();
+    return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
+  };
+  return `${initials(borrowerName)}${initials(lenderName)}-${uuid.slice(-5)}`;
+}
+
 export function calculateNextPaymentDate(current: string, frequency: PaymentFrequency): string {
   const d = new Date(current);
-  if (frequency === 'DAILY') d.setDate(d.getDate() + 1);
-  else if (frequency === 'WEEKLY') d.setDate(d.getDate() + 7);
-  else if (frequency === 'MONTHLY') d.setMonth(d.getMonth() + 1);
+  if (frequency === 'WEEKLY')   d.setDate(d.getDate() + 7);
+  else if (frequency === 'MONTHLY')  d.setMonth(d.getMonth() + 1);
+  else if (frequency === 'ANNUALLY') d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().split('T')[0];
 }
 
-// ── Utility Helpers ───────────────────────────────────────────────────────────
+export const calculateInstallmentStatus = (installment: Installment): InstallmentStatus | 'OVERDUE' | 'UNPAID' => {
+  if (installment.amountPaid >= installment.amountDue) return 'PAID';
+  if (installment.status === 'SKIPPED') return 'SKIPPED';
+  const dueDate = new Date(installment.dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (dueDate < today) return 'OVERDUE';
+  return 'UNPAID';
+};
+
+// ── Shared utility helpers ────────────────────────────────────────────────────
 
 export function personFullName(p: Person): string {
+  if (p.name) return p.name;
   return [p.first_name, p.middle_name, p.last_name].filter(Boolean).join(' ');
 }
 
 export function personInitials(p: Person): string {
-  return `${p.first_name[0]}${p.last_name[0]}`.toUpperCase();
+  if (p.name) {
+    const words = p.name.trim().split(/\s+/);
+    return words.length >= 2
+      ? `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
+      : p.name.slice(0, 2).toUpperCase();
+  }
+  return `${(p.first_name ?? '?')[0]}${(p.last_name ?? '?')[0]}`.toUpperCase();
 }
 
-export function rentalProgress(r: Rental): number {
-  if (r.num_periods === 0) return 0;
-  return ((r.num_periods - r.periods_remaining) / r.num_periods) * 100;
+export function groupInitials(g: Group): string {
+  const words = g.name.trim().split(/\s+/);
+  return words.length === 1
+    ? `${g.name[0]}${g.name[g.name.length - 1]}`.toUpperCase()
+    : `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
 }
 
 export const formatCurrency = (amount: number): string =>
@@ -222,14 +196,8 @@ export const formatCurrency = (amount: number): string =>
 export const formatCurrencyCompact = (amount: number): string =>
   `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export const calculateInstallmentStatus = (installment: any, startDate?: any) => {
-  if (installment.amountPaid >= installment.amountDue) return 'PAID';
-  if (installment.status === 'SKIPPED') return 'SKIPPED';
-  
-  const dueDate = new Date(installment.dueDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Normalize to start of day
-  
-  if (dueDate < today) return 'OVERDUE';
-  return 'UNPAID';
-};
+export function expenseProgress(expense: Expense): number {
+  if (expense.amount === 0) return 0;
+  const paid = expense.amount_paid ?? 0;
+  return Math.min(paid / expense.amount, 1);
+}

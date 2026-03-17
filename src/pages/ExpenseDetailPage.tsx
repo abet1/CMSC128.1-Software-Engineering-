@@ -37,7 +37,7 @@ export default function ExpenseDetailPage() {
       <AppLayout>
         <div className="p-4 lg:p-6 max-w-3xl mx-auto">
           <Link
-            to="/rentals"
+            to="/records"
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
           >
             ← Back
@@ -73,7 +73,7 @@ export default function ExpenseDetailPage() {
       <div className="p-3 sm:p-4 lg:p-6 max-w-3xl mx-auto space-y-4">
         {/* Back */}
         <Link
-          to="/rentals"
+          to="/records"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
         >
           ← Back
