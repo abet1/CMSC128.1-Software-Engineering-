@@ -6,10 +6,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-            <TrendingUp className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">LoanTracker</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground">PayMamaya</h1>
           <p className="text-sm text-muted-foreground mt-1">Loans & Expenses</p>
         </div>
 

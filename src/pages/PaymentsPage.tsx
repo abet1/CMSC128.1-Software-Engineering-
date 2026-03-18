@@ -187,13 +187,21 @@ export default function PaymentsPage() {
         {/* Grouped by month */}
         {groups.map(group => (
           <div key={group.label} className="space-y-1.5">
-            <div className="flex items-center justify-between px-1">
+            {/* Month label - mobile only */}
+            <div className="flex items-center justify-between px-1 lg:hidden">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</span>
               <span className="text-xs font-medium text-foreground tabular-nums">{formatCurrencyCompact(group.total)}</span>
             </div>
 
-            {/* Desktop: table */}
+            {/* Desktop: table with header inside */}
             <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-1 h-5 rounded-full bg-primary" />
+                  <span className="font-display text-base font-bold text-foreground">{group.label}</span>
+                </div>
+                <span className="text-sm font-medium text-foreground tabular-nums">{formatCurrencyCompact(group.total)}</span>
+              </div>
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">

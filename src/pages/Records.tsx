@@ -218,13 +218,13 @@ const Records = () => {
             {/* ── RIGHT: Main content ── */}
             <div className="lg:flex-1 lg:min-w-0 mt-4 lg:mt-0">
 
-              {/* Results bar */}
-              <div className="flex items-center justify-between mb-4">
+              {/* Results bar - mobile only */}
+              <div className="flex items-center justify-between mb-4 lg:hidden">
                 <p className="text-sm text-muted-foreground">
                   <span className="font-semibold text-foreground">{filteredTransactions.length}</span> record{filteredTransactions.length !== 1 ? 's' : ''}
                 </p>
-                {/* View toggle — mobile only (desktop always shows table) */}
-                <div className="flex lg:hidden items-center gap-1 p-1 bg-card rounded-xl border border-border">
+                {/* View toggle */}
+                <div className="flex items-center gap-1 p-1 bg-card rounded-xl border border-border">
                   <button onClick={() => setView('list')} className={cn('p-1.5 rounded-lg transition-all', view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>
                     <List className="w-4 h-4" />
                   </button>
@@ -236,6 +236,15 @@ const Records = () => {
 
               {/* ── Desktop: Data Table ── */}
               <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-1 h-5 rounded-full bg-primary" />
+                    <h2 className="font-display text-base font-bold text-foreground">Records</h2>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{filteredTransactions.length}</span> record{filteredTransactions.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-muted/50 border-b border-border">

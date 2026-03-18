@@ -113,6 +113,15 @@ const People = () => {
             <>
               {/* Desktop table */}
               <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-1 h-5 rounded-full bg-primary" />
+                    <h2 className="font-display text-base font-bold text-foreground">Contacts</h2>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{filteredPersons.length}</span> contact{filteredPersons.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-muted/50 border-b border-border">
@@ -190,6 +199,15 @@ const People = () => {
             <>
               {/* Desktop table */}
               <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-1 h-5 rounded-full bg-primary" />
+                    <h2 className="font-display text-base font-bold text-foreground">Groups</h2>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{filteredGroups.length}</span> group{filteredGroups.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-muted/50 border-b border-border">

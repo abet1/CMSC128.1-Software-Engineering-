@@ -13,5 +13,5 @@ export function isNavActive(itemPath: string, pathname: string): boolean {
 }
 
 export function activeNavLabel(pathname: string): string {
-  return navItems.find(item => isNavActive(item.path, pathname))?.label ?? 'LoanTracker';
+  return navItems.find(item => isNavActive(item.path, pathname))?.label ?? 'PayMamaya';
 }

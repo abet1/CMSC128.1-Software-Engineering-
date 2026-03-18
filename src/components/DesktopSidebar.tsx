@@ -19,11 +19,8 @@ export function DesktopSidebar() {
       {/* Brand */}
       <div className="px-5 pt-6 pb-5 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
-            <TrendingUp className="w-4.5 h-4.5 text-primary-foreground w-[18px] h-[18px]" />
-          </div>
           <div>
-            <p className="font-display font-bold text-foreground text-[15px] tracking-tight leading-tight">LoanTracker</p>
+            <p className="font-display font-bold text-foreground text-[15px] tracking-tight leading-tight">PayMamaya</p>
             <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 tracking-wide uppercase">Loans & Expenses</p>
           </div>
         </div>
