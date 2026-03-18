@@ -1,11 +1,10 @@
 import { AppLayout } from '@/components/AppLayout';
-import { BalanceCard } from '@/components/BalanceCard';
 import { QuickActions } from '@/components/QuickActions';
 import { TransactionItem } from '@/components/TransactionItem';
 import { ActivityItem } from '@/components/ActivityItem';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, TrendingUp, Clock, CheckCircle2, Calendar, ArrowRightCircle } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Users, Clock, CheckCircle2, Calendar, ArrowRightCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLendTransaction, isBorrowTransaction, formatCurrencyCompact } from '@/types';
 import { useMemo } from 'react';
@@ -321,34 +320,86 @@ const Index = () => {
           <div className="lg:grid lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px] lg:gap-6 xl:gap-8 space-y-6 lg:space-y-0">
             {/* Active Transactions */}
             <section className="animate-fade-in stagger-3">
-              <div className="flex items-center justify-between mb-4 lg:mb-5 px-1">
+              <div className="flex items-center justify-between mb-4 px-1">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-1 h-5 rounded-full bg-gradient-to-b from-primary to-primary/50" />
-                  <h2 className="font-display text-lg lg:text-xl font-bold text-foreground">Active Loans</h2>
+                  <div className="w-1 h-5 rounded-full bg-primary" />
+                  <h2 className="font-display text-lg font-bold text-foreground">Active Loans</h2>
                 </div>
-                <button 
-                  onClick={() => navigate('/records')} 
-                  className="group flex items-center gap-1.5 text-sm lg:text-base text-primary font-semibold hover:gap-2 transition-all"
+                <button
+                  onClick={() => navigate('/records')}
+                  className="group flex items-center gap-1.5 text-sm text-primary font-semibold hover:gap-2 transition-all"
                 >
                   <span>See all</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>
-              <div className="space-y-3 lg:space-y-3.5">
-              {activeTransactions.map((transaction) => (
-                <TransactionItem 
-                  key={transaction.id}
-                  transaction={transaction} 
-                  onClick={() => navigate(`/transaction/${transaction.id}`)}
-                />
-              ))}
-              {activeTransactions.length === 0 && (
-                <div className="text-center py-12 lg:py-16 text-muted-foreground">
-                  <p className="text-sm lg:text-base">No active loans</p>
-                </div>
-              )}
-            </div>
-          </section>
+
+              {/* Desktop: mini table */}
+              <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50 border-b border-border">
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2.5">Entry</th>
+                      <th className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2.5">Remaining</th>
+                      <th className="text-center text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2.5">Status</th>
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2.5">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50 bg-card">
+                    {activeTransactions.map(t => {
+                      const isLendT  = isLendTransaction(t);
+                      const isGroupT = t.transactionType === 'GROUP_EXPENSE';
+                      const TIcon    = isGroupT ? Users : isLendT ? TrendingUp : TrendingDown;
+                      const badge = ({
+                        PAID:           { bg: 'bg-success/10',     text: 'text-success',    label: 'Paid'    },
+                        PARTIALLY_PAID: { bg: 'bg-amber-500/10',   text: 'text-amber-500',  label: 'Partial' },
+                        UNPAID:         { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Unpaid'  },
+                      } as Record<string, {bg:string;text:string;label:string}>)[t.status] ?? { bg: 'bg-muted', text: 'text-muted-foreground', label: t.status };
+                      return (
+                        <tr key={t.id} onClick={() => navigate(`/transaction/${t.id}`)} className="cursor-pointer hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                                isLendT ? 'bg-success/10' : isGroupT ? 'bg-primary/10' : 'bg-destructive/10')}>
+                                <TIcon className={cn('w-3.5 h-3.5', isLendT ? 'text-success' : isGroupT ? 'text-primary' : 'text-destructive')} />
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm text-foreground">{t.entryName}</p>
+                                <p className="text-[11px] text-muted-foreground/60 font-mono">{t.referenceId}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className={cn('px-4 py-3.5 text-right text-sm font-semibold tabular-nums', isLendT || isGroupT ? 'text-success' : 'text-destructive')}>
+                            {formatCurrencyCompact(t.amountRemaining)}
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span className={cn('inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold', badge.bg, badge.text)}>{badge.label}</span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{format(t.dateBorrowed, 'MMM d, yyyy')}</td>
+                        </tr>
+                      );
+                    })}
+                    {activeTransactions.length === 0 && (
+                      <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">No active loans</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile: cards */}
+              <div className="lg:hidden space-y-3">
+                {activeTransactions.map(transaction => (
+                  <TransactionItem
+                    key={transaction.id}
+                    transaction={transaction}
+                    onClick={() => navigate(`/transaction/${transaction.id}`)}
+                  />
+                ))}
+                {activeTransactions.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground text-sm">No active loans</div>
+                )}
+              </div>
+            </section>
 
           {/* Recent Activity */}
           <section className="animate-fade-in stagger-4">

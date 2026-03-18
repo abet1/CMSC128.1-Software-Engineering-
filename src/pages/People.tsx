@@ -12,177 +12,256 @@ type TabType = 'contacts' | 'groups';
 
 const People = () => {
   const navigate = useNavigate();
-  const { persons, groups } = useApp();
-  const [person, setPerson] = useState<Person[]>([]);
+  const { groups } = useApp();
+  const [persons, setPersons] = useState<Person[]>([]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [tab, setTab] = useState<TabType>('contacts');
 
- useEffect(() => {
-  fetch('http://localhost:8080/api/persons')
-    .then(res => res.json())
-    .then(data => {
-      console.log('API RESPONSE:', data);
-      setPerson(Array.isArray(data) ? data : data.data ?? []);
-    })
-    .catch(err => console.error('Error fetching contacts:', err));
-}, []);
+  useEffect(() => {
+    fetch('http://localhost:8080/api/persons')
+      .then(res => res.json())
+      .then(data => setPersons(Array.isArray(data) ? data : data.data ?? []))
+      .catch(err => console.error('Error fetching contacts:', err));
+  }, []);
 
+  const contacts = persons.filter(p => p.id !== currentUser.id);
 
-const contacts = person.filter(p => p.id !== currentUser.id);
-  
-  const filteredPersons = contacts.filter(p => 
-    p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-    p.phone?.includes(debouncedSearch) ||
-    p.email?.toLowerCase().includes(debouncedSearch.toLowerCase())
+  const filteredPersons = contacts.filter(p =>
+    (p.name ?? '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (p.phone ?? '').includes(debouncedSearch) ||
+    (p.email ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
-  const filteredGroups = groups.filter(g => 
+  const filteredGroups = groups.filter(g =>
     g.name.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
+  const initials = (name: string) =>
+    name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
   return (
-    <AppLayout title="People">
+    <AppLayout>
       <div className="px-4 lg:px-8 py-4 lg:py-6">
         <div className="max-w-6xl mx-auto space-y-5 lg:space-y-6">
 
-          {/* Header row — mobile: title + add; desktop: title + count + add */}
-          <div className="flex items-center justify-between animate-fade-in">
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="font-display text-2xl font-bold text-foreground">People</h1>
               <p className="hidden lg:block text-sm text-muted-foreground mt-0.5">
-                {tab === 'contacts' ? `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}` : `${groups.length} group${groups.length !== 1 ? 's' : ''}`}
+                {tab === 'contacts'
+                  ? `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}`
+                  : `${groups.length} group${groups.length !== 1 ? 's' : ''}`}
               </p>
             </div>
             <button
               onClick={() => navigate(tab === 'contacts' ? '/contacts/add' : '/groups/add')}
-              className="flex items-center gap-1.5 lg:gap-2 px-4 lg:px-5 py-2.5 lg:py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-all active:scale-95 hover:bg-primary/90"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-all active:scale-95 hover:bg-primary/90"
             >
               <Plus className="w-4 h-4" />
-              <span>{tab === 'contacts' ? 'Add Contact' : 'Create Group'}</span>
+              {tab === 'contacts' ? 'Add Contact' : 'Create Group'}
             </button>
           </div>
 
-          {/* Tabs + Search — side by side on desktop */}
-          <div className="lg:flex lg:items-center lg:gap-4 space-y-3 lg:space-y-0 animate-fade-in stagger-1">
-          <div className="flex gap-1 p-1 bg-muted rounded-xl lg:w-64 lg:shrink-0">
-            <button
-              onClick={() => setTab('contacts')}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-sm lg:text-base font-medium transition-all active:scale-95",
-                tab === 'contacts' 
-                  ? "bg-card text-foreground shadow-soft" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <User className="w-4 h-4 lg:w-5 lg:h-5" />
-              Contacts ({contacts.length})
-            </button>
-            <button
-              onClick={() => setTab('groups')}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-sm lg:text-base font-medium transition-all active:scale-95",
-                tab === 'groups' 
-                  ? "bg-card text-foreground shadow-soft" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Users className="w-4 h-4 lg:w-5 lg:h-5" />
-              Groups ({groups.length})
-            </button>
-          </div>
-
-          {/* Search — desktop: grows to fill remaining tab row space */}
-          <div className="relative lg:flex-1">
-            <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={tab === 'contacts' ? "Search contacts..." : "Search groups..."}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-            />
-            {search && (
-              <button 
-                onClick={() => setSearch('')}
-                className="absolute right-3 lg:right-4 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted transition-colors"
-              >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
-          </div>
-          </div>{/* end tabs+search row */}
-
-          {/* Contacts List */}
-          {tab === 'contacts' && (
-            <div className="animate-fade-in stagger-3">
-            <div className="grid gap-3 lg:gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              {filteredPersons.map((person) => (
-                <button 
-                  key={person.id} 
-                  onClick={() => navigate(`/contacts/${person.id}`)}
-                  className="flex items-center gap-3 lg:gap-4 p-4 lg:p-5 rounded-xl lg:rounded-2xl bg-card border border-border hover:border-primary/40 hover:bg-muted/50 transition-all text-left active:scale-[0.99]"
-                >
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-primary font-bold text-sm lg:text-base">
-                      {person.name.split(' ').map(n => n[0]).join('')}
+          {/* ── Tabs + Search ── */}
+          <div className="lg:flex lg:items-center lg:gap-4 space-y-3 lg:space-y-0">
+            <div className="flex gap-1 p-1 bg-muted rounded-xl lg:w-60 lg:shrink-0">
+              {([
+                { key: 'contacts' as TabType, label: 'Contacts', icon: User,  count: contacts.length },
+                { key: 'groups'   as TabType, label: 'Groups',   icon: Users, count: groups.length  },
+              ]).map(t => {
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => { setTab(t.key); setSearch(''); }}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all',
+                      tab === t.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{t.label}</span>
+                    <span className={cn('text-[11px] tabular-nums', tab === t.key ? 'text-muted-foreground' : 'text-muted-foreground/60')}>
+                      ({t.count})
                     </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground lg:text-base truncate">{person.name}</p>
-                    <p className="text-sm lg:text-base text-muted-foreground truncate">{person.phone}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="relative lg:flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder={tab === 'contacts' ? 'Search contacts…' : 'Search groups…'}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary text-sm"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
                 </button>
-                ))}
-              </div>
-              {filteredPersons.length === 0 && (
-                <div className="text-center py-12 lg:py-16">
-                  <div className="w-16 h-16 lg:w-20 lg:h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                    <User className="w-8 h-8 lg:w-10 lg:h-10 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-display font-semibold text-lg lg:text-xl text-foreground mb-1">No contacts found</h3>
-                  <p className="text-muted-foreground text-sm lg:text-base">Try a different search term</p>
-                </div>
               )}
             </div>
+          </div>
+
+          {/* ── CONTACTS ── */}
+          {tab === 'contacts' && (
+            <>
+              {/* Desktop table */}
+              <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50 border-b border-border">
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Name</th>
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Phone</th>
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Email</th>
+                      <th className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50 bg-card">
+                    {filteredPersons.map(p => (
+                      <tr
+                        key={p.id}
+                        onClick={() => navigate(`/contacts/${p.id}`)}
+                        className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <span className="text-primary font-bold text-xs">{initials(p.name ?? '?')}</span>
+                            </div>
+                            <span className="font-medium text-sm text-foreground">{p.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-muted-foreground">{p.phone || '—'}</td>
+                        <td className="px-4 py-3.5 text-sm text-muted-foreground">{p.email || '—'}</td>
+                        <td className="px-4 py-3.5 text-right">
+                          <ChevronRight className="w-4 h-4 text-muted-foreground/50 ml-auto" />
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredPersons.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-16 text-center">
+                          <User className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                          <p className="text-sm font-medium text-foreground mb-1">No contacts found</p>
+                          <p className="text-xs text-muted-foreground">Try a different search term</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="lg:hidden grid gap-3">
+                {filteredPersons.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => navigate(`/contacts/${p.id}`)}
+                    className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/40 hover:bg-muted/50 transition-all text-left"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-primary font-bold text-sm">{initials(p.name ?? '?')}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{p.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{p.phone}</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                  </button>
+                ))}
+                {filteredPersons.length === 0 && (
+                  <div className="text-center py-12">
+                    <User className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No contacts found</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
-          {/* Groups List */}
+          {/* ── GROUPS ── */}
           {tab === 'groups' && (
-            <div className="animate-fade-in stagger-3">
-            <div className="grid gap-3 lg:gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              {filteredGroups.map((group) => (
-                <button 
-                  key={group.id} 
-                  onClick={() => navigate(`/groups/${group.id}`)}
-                  className="flex items-center gap-3 lg:gap-4 p-4 lg:p-5 rounded-xl lg:rounded-2xl bg-card border border-border hover:border-primary/40 hover:bg-muted/50 transition-all text-left active:scale-[0.99]"
-                >
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Users className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground lg:text-base truncate">{group.name}</p>
-                    <p className="text-sm lg:text-base text-muted-foreground">{group.members.length} members</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                </button>
-                ))}
+            <>
+              {/* Desktop table */}
+              <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50 border-b border-border">
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Group Name</th>
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Members</th>
+                      <th className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50 bg-card">
+                    {filteredGroups.map(g => (
+                      <tr
+                        key={g.id}
+                        onClick={() => navigate(`/groups/${g.id}`)}
+                        className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <Users className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="font-medium text-sm text-foreground">{g.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-muted-foreground">{g.members.length} member{g.members.length !== 1 ? 's' : ''}</td>
+                        <td className="px-4 py-3.5 text-right">
+                          <ChevronRight className="w-4 h-4 text-muted-foreground/50 ml-auto" />
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredGroups.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-16 text-center">
+                          <Users className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                          <p className="text-sm font-medium text-foreground mb-1">No groups found</p>
+                          <p className="text-xs text-muted-foreground">Create a group to share expenses</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-              {filteredGroups.length === 0 && (
-                <div className="text-center py-12 lg:py-16">
-                  <div className="w-16 h-16 lg:w-20 lg:h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                    <Users className="w-8 h-8 lg:w-10 lg:h-10 text-muted-foreground" />
+
+              {/* Mobile cards */}
+              <div className="lg:hidden grid gap-3">
+                {filteredGroups.map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => navigate(`/groups/${g.id}`)}
+                    className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/40 hover:bg-muted/50 transition-all text-left"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Users className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{g.name}</p>
+                      <p className="text-sm text-muted-foreground">{g.members.length} members</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                  </button>
+                ))}
+                {filteredGroups.length === 0 && (
+                  <div className="text-center py-12">
+                    <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No groups found</p>
                   </div>
-                  <h3 className="font-display font-semibold text-lg lg:text-xl text-foreground mb-1">No groups found</h3>
-                  <p className="text-muted-foreground text-sm lg:text-base">Create a group to share expenses</p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </>
           )}
+
         </div>
       </div>
-
     </AppLayout>
   );
 };

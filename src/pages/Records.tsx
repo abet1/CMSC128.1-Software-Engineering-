@@ -8,10 +8,17 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { currentUser } from '@/data/user';
 import { useDebounce } from '@/hooks/useDebounce';
+import { format } from 'date-fns';
 
 type FilterType = 'all' | 'lent' | 'borrowed' | 'group';
 type StatusType = 'all' | 'unpaid' | 'partial' | 'paid';
 type ViewType = 'list' | 'grid';
+
+const statusBadgeMap: Record<string, { bg: string; text: string; label: string }> = {
+  PAID:           { bg: 'bg-success/10',     text: 'text-success',    label: 'Paid'    },
+  PARTIALLY_PAID: { bg: 'bg-amber-500/10',   text: 'text-amber-500',  label: 'Partial' },
+  UNPAID:         { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Unpaid'  },
+};
 
 const Records = () => {
   const { transactions, persons, groups } = useApp();
@@ -23,38 +30,37 @@ const Records = () => {
   const [showFilters, setShowFilters] = useState(false);
   const navigate = useNavigate();
 
+  const getContactName = (transaction: typeof transactions[0]) => {
+    if (transaction.transactionType === 'GROUP_EXPENSE' && transaction.borrowerGroupId) {
+      return groups.find(g => g.id === transaction.borrowerGroupId)?.name || '';
+    }
+    if (isLendTransaction(transaction) && transaction.borrowerContactId) {
+      if (transaction.borrowerContactId === 'current') return currentUser.name ?? '';
+      return persons.find(p => p.id === transaction.borrowerContactId)?.name || '';
+    }
+    if (isBorrowTransaction(transaction) && transaction.lenderContactId) {
+      if (transaction.lenderContactId === 'current') return currentUser.name ?? '';
+      return persons.find(p => p.id === transaction.lenderContactId)?.name || '';
+    }
+    return '';
+  };
+
   const filteredTransactions = useMemo(() => {
-    const getContactName = (transaction: typeof transactions[0]) => {
-      if (transaction.transactionType === 'GROUP_EXPENSE' && transaction.borrowerGroupId) {
-        const group = groups.find(g => g.id === transaction.borrowerGroupId);
-        return group?.name || '';
-      }
-      if (isLendTransaction(transaction) && transaction.borrowerContactId) {
-        if (transaction.borrowerContactId === 'current') return currentUser.name;
-        const person = persons.find(p => p.id === transaction.borrowerContactId);
-        return person?.name || '';
-      }
-      if (isBorrowTransaction(transaction) && transaction.lenderContactId) {
-        if (transaction.lenderContactId === 'current') return currentUser.name;
-        const person = persons.find(p => p.id === transaction.lenderContactId);
-        return person?.name || '';
-      }
-      return '';
-    };
     return transactions.filter(t => {
       const matchesFilter = filter === 'all' ||
-        (filter === 'lent' && (isLendTransaction(t) || t.transactionType === 'GROUP_EXPENSE')) ||
+        (filter === 'lent'     && (isLendTransaction(t) || t.transactionType === 'GROUP_EXPENSE')) ||
         (filter === 'borrowed' && isBorrowTransaction(t)) ||
-        (filter === 'group' && t.transactionType === 'GROUP_EXPENSE');
+        (filter === 'group'    && t.transactionType === 'GROUP_EXPENSE');
       const matchesStatus = status === 'all' ||
-        (status === 'unpaid' && t.status === 'UNPAID') ||
+        (status === 'unpaid'  && t.status === 'UNPAID') ||
         (status === 'partial' && t.status === 'PARTIALLY_PAID') ||
-        (status === 'paid' && t.status === 'PAID');
+        (status === 'paid'    && t.status === 'PAID');
       const contactName = getContactName(t);
+      const q = debouncedSearch.toLowerCase();
       const matchesSearch =
-        t.entryName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        t.referenceId.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        contactName.toLowerCase().includes(debouncedSearch.toLowerCase());
+        t.entryName.toLowerCase().includes(q) ||
+        t.referenceId.toLowerCase().includes(q) ||
+        contactName.toLowerCase().includes(q);
       return matchesFilter && matchesStatus && matchesSearch;
     });
   }, [filter, status, debouncedSearch, transactions, persons, groups]);
@@ -63,9 +69,9 @@ const Records = () => {
     const lent = filteredTransactions.filter(t => isLendTransaction(t) || t.transactionType === 'GROUP_EXPENSE');
     const borrowed = filteredTransactions.filter(t => isBorrowTransaction(t));
     return {
-      totalLent: lent.reduce((acc, t) => acc + t.amountRemaining, 0),
-      totalBorrowed: borrowed.reduce((acc, t) => acc + t.amountRemaining, 0),
-      count: filteredTransactions.length,
+      totalLent:     lent.reduce((s, t) => s + t.amountRemaining, 0),
+      totalBorrowed: borrowed.reduce((s, t) => s + t.amountRemaining, 0),
+      count:         filteredTransactions.length,
     };
   }, [filteredTransactions]);
 
@@ -75,74 +81,59 @@ const Records = () => {
     { key: 'borrowed', label: 'Borrowed', icon: TrendingDown },
     { key: 'group',    label: 'Group',    icon: Users },
   ];
-
   const statusFilters: { key: StatusType; label: string }[] = [
     { key: 'all',     label: 'All Status' },
-    { key: 'unpaid',  label: 'Unpaid' },
-    { key: 'partial', label: 'Partial' },
-    { key: 'paid',    label: 'Paid' },
+    { key: 'unpaid',  label: 'Unpaid'     },
+    { key: 'partial', label: 'Partial'    },
+    { key: 'paid',    label: 'Paid'       },
   ];
 
-  const SearchInput = ({ className }: { className?: string }) => (
-    <div className={cn('relative', className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-      <input
-        type="text"
-        placeholder="Search by name or reference…"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-      />
-      {search && (
-        <button
-          onClick={() => setSearch('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
-    </div>
-  );
-
   return (
-    <AppLayout title="Records">
+    <AppLayout>
       <div className="px-4 lg:px-8 py-4 lg:py-6">
         <div className="max-w-7xl mx-auto">
 
-          {/* ── Desktop: Stats row (hidden on mobile) ── */}
-          <div className="hidden lg:grid grid-cols-3 gap-5 mb-8 animate-fade-in">
+          {/* ── Desktop stats row ── */}
+          <div className="hidden lg:grid grid-cols-3 gap-5 mb-8">
             <div className="bg-card rounded-xl p-5 border border-border">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Total Records</p>
-              <p className="text-3xl font-display font-bold text-foreground">{summary.count}</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Records</p>
+              <p className="text-3xl font-display font-bold text-foreground tabular-nums">{summary.count}</p>
             </div>
             <div className="bg-card rounded-xl p-5 border border-success/20">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Receivables</p>
-              <p className="text-3xl font-display font-bold text-success">{formatCurrencyCompact(summary.totalLent)}</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Receivables</p>
+              <p className="text-3xl font-display font-bold text-success tabular-nums">{formatCurrencyCompact(summary.totalLent)}</p>
             </div>
             <div className="bg-card rounded-xl p-5 border border-destructive/20">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Payables</p>
-              <p className="text-3xl font-display font-bold text-destructive">{formatCurrencyCompact(summary.totalBorrowed)}</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Payables</p>
+              <p className="text-3xl font-display font-bold text-destructive tabular-nums">{formatCurrencyCompact(summary.totalBorrowed)}</p>
             </div>
           </div>
 
           {/* Mobile title */}
-          <h1 className="lg:hidden font-display text-2xl font-bold text-foreground mb-4 animate-fade-in">Records</h1>
+          <h1 className="lg:hidden font-display text-2xl font-bold text-foreground mb-4">Records</h1>
 
           {/* ── Two-column: filter panel + content ── */}
           <div className="lg:flex lg:gap-8 lg:items-start">
 
-            {/* ── LEFT: Filter panel ── */}
-            <div className="lg:w-52 lg:shrink-0 lg:sticky lg:top-6 animate-fade-in">
+            {/* ── LEFT: Filter Panel ── */}
+            <div className="lg:w-48 lg:shrink-0 lg:sticky lg:top-6">
 
-              {/* Mobile: search + filter toggle in one row */}
+              {/* Mobile: search + filter toggle */}
               <div className="flex items-center gap-2 lg:hidden mb-4">
-                <SearchInput className="flex-1" />
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 text-sm"
+                  />
+                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X className="w-4 h-4" /></button>}
+                </div>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={cn(
-                    'flex items-center justify-center w-11 h-11 rounded-xl border transition-all shrink-0',
-                    showFilters ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border'
-                  )}
+                  className={cn('flex items-center justify-center w-11 h-11 rounded-xl border transition-all shrink-0', showFilters ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border')}
                 >
                   <SlidersHorizontal className="w-4 h-4" />
                 </button>
@@ -150,136 +141,172 @@ const Records = () => {
 
               {/* Desktop: search full-width */}
               <div className="hidden lg:block mb-5">
-                <SearchInput />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 text-sm"
+                  />
+                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X className="w-4 h-4" /></button>}
+                </div>
               </div>
 
-              {/* Filters: toggle on mobile, always on desktop */}
+              {/* Filters */}
               <div className={cn(!showFilters && 'hidden lg:block', 'space-y-5')}>
-
-                {/* Type filter */}
                 <div>
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em] mb-2 px-1">
-                    Type
-                  </p>
-                  {/* Mobile: horizontal scroll pills */}
-                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 lg:hidden">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Type</p>
+                  {/* Mobile: pills */}
+                  <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
                     {typeFilters.map(f => {
                       const Icon = f.icon;
                       return (
-                        <button
-                          key={f.key}
-                          onClick={() => setFilter(f.key)}
-                          className={cn(
-                            'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border',
-                            filter === f.key
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'bg-card text-muted-foreground border-border hover:text-foreground'
-                          )}
-                        >
-                          <Icon className="w-3.5 h-3.5" />
-                          {f.label}
+                        <button key={f.key} onClick={() => setFilter(f.key)}
+                          className={cn('flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all',
+                            filter === f.key ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground')}>
+                          <Icon className="w-3.5 h-3.5" />{f.label}
                         </button>
                       );
                     })}
                   </div>
-                  {/* Desktop: vertical list */}
-                  <div className="hidden lg:flex lg:flex-col lg:gap-0.5">
+                  {/* Desktop: vertical nav list */}
+                  <div className="hidden lg:flex flex-col gap-0.5">
                     {typeFilters.map(f => {
                       const Icon = f.icon;
                       return (
-                        <button
-                          key={f.key}
-                          onClick={() => setFilter(f.key)}
-                          className={cn(
-                            'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left',
-                            filter === f.key
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground hover:bg-card hover:text-foreground'
-                          )}
-                        >
+                        <button key={f.key} onClick={() => setFilter(f.key)}
+                          className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left',
+                            filter === f.key ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground')}>
                           <Icon className="w-4 h-4 shrink-0" />
-                          {f.label}
-                          {filter === f.key && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
+                          <span className="flex-1">{f.label}</span>
+                          {filter === f.key && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Status filter */}
                 <div>
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em] mb-2 px-1">
-                    Status
-                  </p>
-                  {/* Mobile: horizontal pills */}
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Status</p>
+                  {/* Mobile: pills */}
                   <div className="flex flex-wrap gap-2 lg:hidden">
                     {statusFilters.map(f => (
-                      <button
-                        key={f.key}
-                        onClick={() => setStatus(f.key)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
-                          status === f.key
-                            ? 'bg-foreground text-background border-foreground/20'
-                            : 'bg-card text-muted-foreground border-border hover:text-foreground'
-                        )}
-                      >
+                      <button key={f.key} onClick={() => setStatus(f.key)}
+                        className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
+                          status === f.key ? 'bg-foreground text-background border-foreground/20' : 'bg-card text-muted-foreground border-border hover:text-foreground')}>
                         {f.label}
                       </button>
                     ))}
                   </div>
-                  {/* Desktop: vertical list */}
-                  <div className="hidden lg:flex lg:flex-col lg:gap-0.5">
+                  {/* Desktop: vertical nav list */}
+                  <div className="hidden lg:flex flex-col gap-0.5">
                     {statusFilters.map(f => (
-                      <button
-                        key={f.key}
-                        onClick={() => setStatus(f.key)}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left',
-                          status === f.key
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-muted-foreground hover:bg-card hover:text-foreground'
-                        )}
-                      >
-                        {f.label}
-                        {status === f.key && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
+                      <button key={f.key} onClick={() => setStatus(f.key)}
+                        className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left',
+                          status === f.key ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground')}>
+                        <span className="flex-1">{f.label}</span>
+                        {status === f.key && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                       </button>
                     ))}
                   </div>
                 </div>
-
               </div>
             </div>
 
-            {/* ── RIGHT: Transactions ── */}
+            {/* ── RIGHT: Main content ── */}
             <div className="lg:flex-1 lg:min-w-0 mt-4 lg:mt-0">
 
-              {/* Results count + view toggle */}
-              <div className="flex items-center justify-between mb-4 animate-fade-in stagger-1">
+              {/* Results bar */}
+              <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">
                   <span className="font-semibold text-foreground">{filteredTransactions.length}</span> record{filteredTransactions.length !== 1 ? 's' : ''}
                 </p>
-                <div className="flex items-center gap-1 p-1 bg-card rounded-xl border border-border">
-                  <button
-                    onClick={() => setView('list')}
-                    className={cn('p-1.5 rounded-lg transition-all', view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
-                  >
+                {/* View toggle — mobile only (desktop always shows table) */}
+                <div className="flex lg:hidden items-center gap-1 p-1 bg-card rounded-xl border border-border">
+                  <button onClick={() => setView('list')} className={cn('p-1.5 rounded-lg transition-all', view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>
                     <List className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => setView('grid')}
-                    className={cn('p-1.5 rounded-lg transition-all', view === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
-                  >
+                  <button onClick={() => setView('grid')} className={cn('p-1.5 rounded-lg transition-all', view === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>
                     <LayoutGrid className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Transaction list */}
-              <div className={cn(
-                'animate-fade-in stagger-2',
-                view === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3' : 'space-y-2.5'
-              )}>
+              {/* ── Desktop: Data Table ── */}
+              <div className="hidden lg:block rounded-xl border border-border overflow-hidden">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50 border-b border-border">
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 w-[35%]">Entry</th>
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Contact</th>
+                      <th className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Total</th>
+                      <th className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Remaining</th>
+                      <th className="text-center text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Status</th>
+                      <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50 bg-card">
+                    {filteredTransactions.map(t => {
+                      const isLendT  = isLendTransaction(t);
+                      const isGroupT = t.transactionType === 'GROUP_EXPENSE';
+                      const TIcon    = isGroupT ? Users : isLendT ? TrendingUp : TrendingDown;
+                      const cName    = getContactName(t);
+                      const badge    = statusBadgeMap[t.status] ?? { bg: 'bg-muted', text: 'text-muted-foreground', label: t.status };
+                      return (
+                        <tr
+                          key={t.id}
+                          onClick={() => navigate(`/transaction/${t.id}`)}
+                          className="cursor-pointer hover:bg-muted/30 transition-colors group"
+                        >
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                                isLendT ? 'bg-success/10' : isGroupT ? 'bg-primary/10' : 'bg-destructive/10')}>
+                                <TIcon className={cn('w-3.5 h-3.5',
+                                  isLendT ? 'text-success' : isGroupT ? 'text-primary' : 'text-destructive')} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm text-foreground truncate leading-tight">{t.entryName}</p>
+                                <p className="text-[11px] text-muted-foreground/70 font-mono leading-tight mt-0.5">{t.referenceId}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-muted-foreground max-w-[140px] truncate">{cName || '—'}</td>
+                          <td className="px-4 py-3.5 text-right text-sm font-medium tabular-nums text-foreground whitespace-nowrap">
+                            {formatCurrencyCompact(t.amountBorrowed)}
+                          </td>
+                          <td className={cn('px-4 py-3.5 text-right text-sm font-semibold tabular-nums whitespace-nowrap',
+                            isLendT || isGroupT ? 'text-success' : 'text-destructive')}>
+                            {formatCurrencyCompact(t.amountRemaining)}
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span className={cn('inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold', badge.bg, badge.text)}>
+                              {badge.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">
+                            {format(t.dateBorrowed, 'MMM d, yyyy')}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredTransactions.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-16 text-center">
+                          <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                          <p className="text-sm font-medium text-foreground mb-1">No records found</p>
+                          <p className="text-xs text-muted-foreground">Try adjusting your search or filters</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── Mobile: Cards ── */}
+              <div className={cn('lg:hidden', view === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-2.5')}>
                 {filteredTransactions.map(t => (
                   <TransactionItem
                     key={t.id}
@@ -289,12 +316,9 @@ const Records = () => {
                   />
                 ))}
                 {filteredTransactions.length === 0 && (
-                  <div className="text-center py-16 col-span-full">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                      <Search className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="font-display font-semibold text-lg text-foreground mb-1">No records found</h3>
-                    <p className="text-muted-foreground text-sm">Try adjusting your search or filters</p>
+                  <div className="text-center py-16">
+                    <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No records found</p>
                   </div>
                 )}
               </div>
