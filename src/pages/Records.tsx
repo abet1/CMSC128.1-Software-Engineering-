@@ -6,7 +6,7 @@ import { formatCurrencyCompact, isLendTransaction, isBorrowTransaction } from '@
 import { Search, TrendingUp, TrendingDown, Users, LayoutGrid, List, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { currentUser } from '@/data/user';
+import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { format } from 'date-fns';
 
@@ -21,6 +21,7 @@ const statusBadgeMap: Record<string, { bg: string; text: string; label: string }
 };
 
 const Records = () => {
+  const { user } = useAuth();
   const { transactions, persons, groups } = useApp();
   const [filter, setFilter] = useState<FilterType>('all');
   const [status, setStatus] = useState<StatusType>('all');
@@ -35,11 +36,11 @@ const Records = () => {
       return groups.find(g => g.id === transaction.borrowerGroupId)?.name || '';
     }
     if (isLendTransaction(transaction) && transaction.borrowerContactId) {
-      if (transaction.borrowerContactId === 'current') return currentUser.name ?? '';
+      if (transaction.borrowerContactId === user?.id) return user?.name ?? '';
       return persons.find(p => p.id === transaction.borrowerContactId)?.name || '';
     }
     if (isBorrowTransaction(transaction) && transaction.lenderContactId) {
-      if (transaction.lenderContactId === 'current') return currentUser.name ?? '';
+      if (transaction.lenderContactId === user?.id) return user?.name ?? '';
       return persons.find(p => p.id === transaction.lenderContactId)?.name || '';
     }
     return '';

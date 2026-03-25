@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/AppLayout';
-import { currentUser } from '@/data/user';
+import { useAuth } from '@/context/AuthContext';
 import { User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Palette, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const Settings = () => {
   const [notifications, setNotifications] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
-  const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const name = user?.name ?? 'Guest';
+  const initials = name.trim().split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  const handleSignOut = () => {
+    signOut();
+    navigate('/login');
+  };
 
   const menuItems = [
     { icon: User, label: 'Account', description: 'Manage your profile', onClick: () => {} },
@@ -34,8 +43,8 @@ const Settings = () => {
                 <span className="text-primary font-bold text-xl lg:text-2xl">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-display font-semibold text-lg lg:text-xl text-foreground">{currentUser.name}</h2>
-                <p className="text-sm lg:text-base text-muted-foreground truncate">{currentUser.email}</p>
+                <h2 className="font-display font-semibold text-lg lg:text-xl text-foreground">{name}</h2>
+                <p className="text-sm lg:text-base text-muted-foreground truncate">{user?.email ?? 'Guest session'}</p>
               </div>
               <button className="px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl bg-muted text-sm lg:text-base font-medium text-foreground hover:bg-muted/80 transition-all active:scale-[0.98]">
                 Edit
@@ -106,9 +115,12 @@ const Settings = () => {
           </div>
 
           {/* Logout */}
-          <button className="w-full flex items-center justify-center gap-2 p-4 lg:p-5 rounded-2xl border border-destructive/20 text-destructive font-medium hover:bg-destructive/5 transition-all active:scale-[0.98] animate-fade-in stagger-5">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center gap-2 p-4 lg:p-5 rounded-2xl border border-destructive/20 text-destructive font-medium hover:bg-destructive/5 transition-all active:scale-[0.98] animate-fade-in stagger-5"
+          >
             <LogOut className="w-5 h-5" />
-            Log Out
+            Sign Out
           </button>
         </div>
       </div>

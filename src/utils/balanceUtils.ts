@@ -1,6 +1,5 @@
 import { Person, Transaction, PaymentAllocation, PersonBalance } from '@/types';
 import { formatCurrencyCompact } from '@/types';
-import { currentUser } from '@/data/user';
 
 export function calculatePersonBalance(
   personId: string,
@@ -49,11 +48,12 @@ export function calculatePersonBalance(
 export function calculateAllPersonBalances(
   persons: Person[],
   transactions: Transaction[],
-  paymentAllocations: PaymentAllocation[]
+  paymentAllocations: PaymentAllocation[],
+  currentUserId: string
 ): Map<string, PersonBalance> {
   const map = new Map<string, PersonBalance>();
   for (const person of persons) {
-    if (person.id === currentUser.id) continue;
+    if (person.id === currentUserId) continue;
     map.set(person.id, calculatePersonBalance(person.id, transactions, paymentAllocations));
   }
   return map;

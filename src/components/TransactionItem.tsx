@@ -3,7 +3,7 @@ import { Transaction, formatCurrencyCompact, isLendTransaction } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useApp } from '@/context/AppContext';
-import { currentUser } from '@/data/user';
+import { useAuth } from '@/context/AuthContext';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -12,6 +12,7 @@ interface TransactionItemProps {
 }
 
 export function TransactionItem({ transaction, onClick, variant = 'default' }: TransactionItemProps) {
+  const { user } = useAuth();
   const { persons, groups } = useApp();
   const isLend = isLendTransaction(transaction);
   const isGroupExpense = transaction.transactionType === 'GROUP_EXPENSE';
@@ -22,12 +23,12 @@ export function TransactionItem({ transaction, onClick, variant = 'default' }: T
       return group?.name || 'Group';
     }
     if (isLend && transaction.borrowerContactId) {
-      if (transaction.borrowerContactId === 'current') return currentUser.name;
+      if (transaction.borrowerContactId === user?.id) return user?.name ?? 'You';
       const person = persons.find(p => p.id === transaction.borrowerContactId);
       return person?.name || 'Unknown';
     }
     if (!isLend && transaction.lenderContactId) {
-      if (transaction.lenderContactId === 'current') return currentUser.name;
+      if (transaction.lenderContactId === user?.id) return user?.name ?? 'You';
       const person = persons.find(p => p.id === transaction.lenderContactId);
       return person?.name || 'Unknown';
     }

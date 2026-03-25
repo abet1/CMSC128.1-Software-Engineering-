@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { useApp } from '@/context/AppContext';
-import { currentUser } from '@/data/user';
+import { useAuth } from '@/context/AuthContext';
 import { User, Users, Plus, ChevronRight, Search, X, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -21,6 +21,7 @@ type TabType = 'contacts' | 'groups';
 
 const People = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { groups, transactions, paymentAllocations, addPerson } = useApp();
   const { toast } = useToast();
   const [persons, setPersons] = useState<Person[]>([]);
@@ -37,7 +38,7 @@ const People = () => {
       .catch(err => console.error('Error fetching contacts:', err));
   }, []);
 
-  const contacts = persons.filter(p => p.id !== currentUser.id);
+  const contacts = persons.filter(p => p.id !== user?.id);
 
   const filteredPersons = contacts.filter(p =>
     (p.name ?? '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -54,7 +55,7 @@ const People = () => {
 
   // Balance map for all contacts
   const balanceMap = useMemo(
-    () => calculateAllPersonBalances(persons, transactions, paymentAllocations),
+    () => calculateAllPersonBalances(persons, transactions, paymentAllocations, user?.id ?? ''),
     [persons, transactions, paymentAllocations]
   );
 

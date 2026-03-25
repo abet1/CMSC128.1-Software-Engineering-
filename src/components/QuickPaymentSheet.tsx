@@ -11,7 +11,6 @@ import { formatCurrencyCompact, isLendTransaction, isBorrowTransaction } from '@
 import { format } from 'date-fns';
 import { Search, TrendingUp, TrendingDown, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { currentUser } from '@/data/user';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface QuickPaymentSheetProps {

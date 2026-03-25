@@ -13,7 +13,6 @@ import {
   generateReferenceId,
   calculateInstallmentStatus,
 } from '@/types';
-import { currentUser } from '@/data/user';
 import { getDueNotificationsFromData } from '@/utils/notifications';
 import { mockPersons, mockGroups, mockTransactions, mockPaymentAllocations } from '@/api/mock';
 
@@ -69,7 +68,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [persons, setPersons] = useState<Person[]>([currentUser]);
+  const [persons, setPersons] = useState<Person[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [installmentPlans, setInstallmentPlans] = useState<InstallmentPlan[]>([]);
@@ -124,13 +123,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-
-  // Helper to get person name
-  const getPersonName = (id: string): string => {
-    if (id === 'current') return currentUser.name;
-    const person = persons.find(p => p.id === id);
-    return person?.name || 'Unknown';
-  };
 
   // Helper to calculate payment status
   const calculatePaymentStatus = (amountBorrowed: number, amountRemaining: number): PaymentStatus => {

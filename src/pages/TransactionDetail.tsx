@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { useApp } from '@/context/AppContext';
-import { currentUser } from '@/data/user';
+import { useAuth } from '@/context/AuthContext';
 import { formatCurrencyCompact, InstallmentStatus, isLendTransaction } from '@/types';
 import {
   ArrowLeft, Calendar, User, Users, FileText, Check, Clock,
@@ -27,6 +27,7 @@ const getInstallmentStatusConfig = (status: InstallmentStatus | string) => {
 const TransactionDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { transactions, persons, groups, payments, installmentPlans, paymentAllocations, skipInstallment } = useApp();
 
   const transaction = id ? transactions.find(t => String(t.id) === String(id)) : undefined;
@@ -66,7 +67,7 @@ const TransactionDetail = () => {
 
   const getContactName = (contactId?: string) => {
     if (!contactId) return 'Unknown';
-    if (contactId === currentUser.id) return currentUser.name;
+    if (user && contactId === user.id) return user.name;
     return persons.find(p => p.id === contactId)?.name || 'Unknown';
   };
 
