@@ -45,25 +45,30 @@ export default function AddContactPage() {
     };
 
   try {
-    // Send POST request to backend
-    const res = await fetch('http://localhost:8080/api/persons', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    let newContact: Person;
 
-    if (!res.ok) throw new Error('Failed to add contact');
+    try {
+      const res = await fetch('http://localhost:8080/api/persons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Backend unavailable');
+      newContact = await res.json();
+    } catch {
+      // Backend unavailable — create locally
+      newContact = {
+        ...payload,
+        id: `local_${Date.now()}`,
+        createdAt: new Date(),
+      } as Person;
+    }
 
-    const newContact: Person = await res.json();
-
-    // Update frontend state
     addPerson(newContact);
 
     toast({
-      title: 'Success',
-      description: 'Contact added successfully',
+      title: 'Contact added',
+      description: `${newContact.name} was added successfully`,
     });
 
     if (returnTo !== '/people') {
@@ -77,7 +82,7 @@ export default function AddContactPage() {
     console.error(error);
     toast({
       title: 'Error',
-      description: 'Could not add contact. Try again later.',
+      description: 'Could not add contact.',
       variant: 'destructive',
     });
   }

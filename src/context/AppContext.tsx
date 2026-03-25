@@ -15,6 +15,7 @@ import {
 } from '@/types';
 import { currentUser } from '@/data/user';
 import { getDueNotificationsFromData } from '@/utils/notifications';
+import { mockPersons, mockGroups, mockTransactions, mockPaymentAllocations } from '@/api/mock';
 
 interface AppContextType {
   // Data
@@ -77,49 +78,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetch("http://localhost:8080/api/persons")
-      .then(res => res.json())
+      .then(res => { if (!res.ok) throw new Error(); return res.json(); })
       .then(data => {
         console.log("FETCHED PERSONS:", data);
-        setPersons(data);
+        setPersons(Array.isArray(data) ? data : data.data ?? []);
       })
-      .catch(err => console.error("Failed to fetch persons", err));
+      .catch(() => {
+        console.warn("Backend unavailable — using mock persons");
+        setPersons(mockPersons);
+      });
   }, []);
 
   useEffect(() => {
     fetch('http://localhost:8080/api/groups')
-      .then(res => res.json())
-      .then(data => setGroups(data))
-      .catch(err => console.error('Error fetching groups:', err));
+      .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+      .then(data => setGroups(Array.isArray(data) ? data : data.data ?? []))
+      .catch(() => {
+        console.warn("Backend unavailable — using mock groups");
+        setGroups(mockGroups);
+      });
   }, []);
 
   useEffect(() => {
-  fetch('http://localhost:8080/api/loanentries')
-    .then(res => res.json())
-    .then(data => {
-      console.log('RAW LOAN ENTRIES:', data);
-
-      const mappedTransactions = Array.isArray(data)
-        ? data.map(t => ({
-            ...t,
-            // Map backend IDs to frontend expected fields
-            borrowerContactId: t.borrowerId ?? null,
-            lenderContactId: t.lenderId ?? null,
-
-            // Provide defaults for missing frontend-required fields
-            transactionType: t.transactionType ?? 'LEND', // or 'BORROW' if you know
-            status: t.status ?? 'UNPAID',
-            amountRemaining: t.amountRemaining ?? t.amountBorrowed ?? 0,
-            dateBorrowed: t.dateBorrowed ?? new Date().toISOString(),
-          }))
-        : [];
-
-      setTransactions(mappedTransactions);
-    })
-    .catch(err => {
-      console.error('Failed to fetch loan entries:', err);
-      setTransactions([]);
-    });
-}, []);
+    fetch('http://localhost:8080/api/loanentries')
+      .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+      .then(data => {
+        console.log('RAW LOAN ENTRIES:', data);
+        const mapped = Array.isArray(data)
+          ? data.map(t => ({
+              ...t,
+              borrowerContactId: t.borrowerId ?? null,
+              lenderContactId: t.lenderId ?? null,
+              transactionType: t.transactionType ?? 'LEND',
+              status: t.status ?? 'UNPAID',
+              amountRemaining: t.amountRemaining ?? t.amountBorrowed ?? 0,
+              dateBorrowed: t.dateBorrowed ?? new Date().toISOString(),
+            }))
+          : [];
+        setTransactions(mapped);
+      })
+      .catch(() => {
+        console.warn("Backend unavailable — using mock transactions");
+        setTransactions(mockTransactions);
+        setPaymentAllocations(mockPaymentAllocations);
+      });
+  }, []);
 
 
   // Helper to get person name

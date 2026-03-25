@@ -2,18 +2,47 @@ import type {
   Person,
   Expense,
   GroupExpenseAllocation,
+  Group,
   Payment,
+  PaymentAllocation,
   Transaction,
 } from '../types';
+
+// Current user ID (must match src/data/user.ts)
+const ME = '49e46789-d54e-4cb1-af9b-8af4e452a001';
 
 // ── Persons ───────────────────────────────────────────────────────────────────
 
 export const mockPersons: Person[] = [
   { id: 'p1', name: 'David Pasumbal', phone: '+63 917 111 2222', email: 'dave@email.com', created_at: '2025-10-01T00:00:00Z' },
-  { id: 'p2', name: 'Josh Cimanes',   phone: '+63 917 333 4444', email: 'josh@email.com', created_at: '2025-10-02T00:00:00Z' },
   { id: 'p3', name: 'Albert Caro',    phone: '+63 917 555 6666', created_at: '2025-10-03T00:00:00Z' },
   { id: 'p4', name: 'Maria Santos',   phone: '+63 917 777 8888', email: 'maria@email.com', created_at: '2025-10-04T00:00:00Z' },
   { id: 'p5', name: 'Carlo Reyes',    phone: '+63 917 999 0000', created_at: '2025-10-05T00:00:00Z' },
+  // currentUser is loaded separately from src/data/user.ts, not in this list
+];
+
+// ── Groups ─────────────────────────────────────────────────────────────────────
+
+export const mockGroups: Group[] = [
+  {
+    id: 'g1',
+    name: 'Apartment 4B',
+    members: [
+      { id: 'p1', name: 'David Pasumbal', phone: '+63 917 111 2222' },
+      { id: 'p3', name: 'Albert Caro' },
+      { id: 'p4', name: 'Maria Santos', phone: '+63 917 777 8888' },
+    ],
+    createdAt: '2025-10-01T00:00:00Z',
+  },
+  {
+    id: 'g2',
+    name: 'Barkada Trip',
+    members: [
+      { id: 'p1', name: 'David Pasumbal', phone: '+63 917 111 2222' },
+      { id: 'p5', name: 'Carlo Reyes', phone: '+63 917 999 0000' },
+    ],
+    createdAt: '2025-11-01T00:00:00Z',
+  },
 ];
 
 // ── Transactions (Loan entries) ────────────────────────────────────────────────
@@ -24,7 +53,7 @@ export const mockTransactions: Transaction[] = [
     entryName: 'iPhone Purchase Loan',
     referenceId: 'DPJC-7f2a1',
     amount: 30000, amountBorrowed: 30000, amountRemaining: 18000,
-    borrowerContactId: 'p1', lenderContactId: 'p2',
+    borrowerContactId: 'p1', lenderContactId: ME,
     transactionType: 'LEND',
     status: 'PARTIALLY_PAID',
     dateBorrowed: '2025-12-01',
@@ -38,7 +67,7 @@ export const mockTransactions: Transaction[] = [
     entryName: 'Laptop Emergency Fund',
     referenceId: 'ACJC-9b3c2',
     amount: 15000, amountBorrowed: 15000, amountRemaining: 15000,
-    borrowerContactId: 'p3', lenderContactId: 'p2',
+    borrowerContactId: 'p3', lenderContactId: ME,
     transactionType: 'LEND',
     status: 'UNPAID',
     dateBorrowed: '2026-01-10',
@@ -52,7 +81,7 @@ export const mockTransactions: Transaction[] = [
     entryName: 'Business Capital',
     referenceId: 'MSJC-4e5f3',
     amount: 50000, amountBorrowed: 50000, amountRemaining: 20000,
-    borrowerContactId: 'p4', lenderContactId: 'p2',
+    borrowerContactId: 'p4', lenderContactId: ME,
     transactionType: 'LEND',
     status: 'PARTIALLY_PAID',
     dateBorrowed: '2025-11-01',
@@ -66,7 +95,7 @@ export const mockTransactions: Transaction[] = [
     entryName: 'Tuition Fee Loan',
     referenceId: 'JCDP-1a2b4',
     amount: 20000, amountBorrowed: 20000, amountRemaining: 0,
-    borrowerContactId: 'p2', lenderContactId: 'p1',
+    borrowerContactId: ME, lenderContactId: 'p1',
     transactionType: 'BORROW',
     status: 'PAID',
     dateBorrowed: '2025-09-01',
@@ -80,7 +109,7 @@ export const mockTransactions: Transaction[] = [
     entryName: 'Medical Bills',
     referenceId: 'CRJC-8d7e5',
     amount: 8000, amountBorrowed: 8000, amountRemaining: 4000,
-    borrowerContactId: 'p5', lenderContactId: 'p2',
+    borrowerContactId: 'p5', lenderContactId: ME,
     transactionType: 'LEND',
     status: 'PARTIALLY_PAID',
     dateBorrowed: '2026-02-15',
@@ -89,6 +118,44 @@ export const mockTransactions: Transaction[] = [
     loanChannel: 'GCash',
     createdAt: '2026-02-15T00:00:00Z',
   },
+  // GROUP_EXPENSE — Apartment 4B monthly rent split
+  {
+    id: 'tx6',
+    entryName: 'Monthly Rent - March',
+    referenceId: 'G1JC-a1b2c',
+    amount: 18000, amountBorrowed: 18000, amountRemaining: 12000,
+    lenderContactId: ME,
+    borrowerGroupId: 'g1',
+    transactionType: 'GROUP_EXPENSE',
+    status: 'PARTIALLY_PAID',
+    dateBorrowed: '2026-03-01',
+    createdAt: '2026-03-01T00:00:00Z',
+  },
+  // GROUP_EXPENSE — Barkada Trip
+  {
+    id: 'tx7',
+    entryName: 'Palawan Trip Expenses',
+    referenceId: 'G2JC-x9y8z',
+    amount: 12000, amountBorrowed: 12000, amountRemaining: 12000,
+    lenderContactId: ME,
+    borrowerGroupId: 'g2',
+    transactionType: 'GROUP_EXPENSE',
+    status: 'UNPAID',
+    dateBorrowed: '2026-03-20',
+    createdAt: '2026-03-20T00:00:00Z',
+  },
+];
+
+// ── Payment Allocations ────────────────────────────────────────────────────────
+
+export const mockPaymentAllocations: PaymentAllocation[] = [
+  // tx6 — Monthly Rent split among 3 members (₱6,000 each)
+  { id: 'pa1', transactionId: 'tx6', personId: 'p1', allocated_amount: 6000, allocated_percent: 33.33, amount_paid: 6000, is_fully_paid: true },
+  { id: 'pa2', transactionId: 'tx6', personId: 'p3', allocated_amount: 6000, allocated_percent: 33.33, amount_paid: 0,    is_fully_paid: false },
+  { id: 'pa3', transactionId: 'tx6', personId: 'p4', allocated_amount: 6000, allocated_percent: 33.33, amount_paid: 0,    is_fully_paid: false },
+  // tx7 — Palawan Trip split among 2 members (₱6,000 each)
+  { id: 'pa4', transactionId: 'tx7', personId: 'p1', allocated_amount: 6000, allocated_percent: 50, amount_paid: 0, is_fully_paid: false },
+  { id: 'pa5', transactionId: 'tx7', personId: 'p5', allocated_amount: 6000, allocated_percent: 50, amount_paid: 0, is_fully_paid: false },
 ];
 
 // ── Expenses ──────────────────────────────────────────────────────────────────
