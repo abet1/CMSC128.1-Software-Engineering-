@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
-import { ArrowLeft, User, Phone, Mail, Edit2, Trash2, FileText } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Edit2, Trash2, FileText, HandCoins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -15,12 +15,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Person } from '@/types';
+import { Person, formatCurrencyCompact } from '@/types';
+import { cn } from '@/lib/utils';
+import { calculatePersonBalance, getBalanceLabel } from '@/utils/balanceUtils';
 
 export default function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { transactions, groups, deletePerson } = useApp();
+  const { transactions, groups, paymentAllocations, deletePerson } = useApp();
   const { toast } = useToast();
   const [person, setPerson] = useState<Person | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,25 @@ export default function ContactDetailPage() {
     }
     return false;
   });
+
+  // Balance for this contact
+  const balance = person
+    ? calculatePersonBalance(person.id, transactions, paymentAllocations)
+    : null;
+  const balanceLabel = balance ? getBalanceLabel(balance.net) : null;
+
+  // Settle Up: navigate to the largest outstanding transaction with this person
+  function handleSettleUp() {
+    if (!person) return;
+    const candidates = relatedTransactions.filter(t =>
+      t.status !== 'PAID' && (t.amountRemaining ?? 0) > 0
+    );
+    if (candidates.length === 0) return;
+    const largest = candidates.reduce((a, b) =>
+      (b.amountRemaining ?? 0) > (a.amountRemaining ?? 0) ? b : a
+    );
+    navigate(`/record-payment/${largest.id}`);
+  }
 
   const handleDelete = async () => {
     try {
@@ -196,6 +217,38 @@ export default function ContactDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Balance Summary */}
+          {balance && (
+            <div className="bg-card rounded-2xl lg:rounded-3xl p-6 lg:p-8 border border-border/50 shadow-soft">
+              <h3 className="font-display text-lg font-semibold text-foreground mb-4">Balance Summary</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Net Balance</p>
+                  <p className={cn('text-3xl font-bold font-display', balanceLabel?.colorClass)}>
+                    {balance.net >= 0 ? '+' : ''}{formatCurrencyCompact(balance.net)}
+                  </p>
+                  <p className={cn('text-sm mt-1', balanceLabel?.colorClass)}>{balanceLabel?.text}</p>
+                </div>
+                {Math.abs(balance.net) > 0.009 && (
+                  <Button onClick={handleSettleUp} className="h-10 gap-1.5">
+                    <HandCoins className="w-4 h-4" />
+                    Settle Up
+                  </Button>
+                )}
+              </div>
+              <div className="mt-4 pt-4 border-t border-border/50 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">They owe you</span>
+                  <span className="text-success font-medium">{formatCurrencyCompact(balance.receivable)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">You owe them</span>
+                  <span className="text-destructive font-medium">{formatCurrencyCompact(balance.payable)}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Related Transactions */}
           {relatedTransactions.length > 0 && (

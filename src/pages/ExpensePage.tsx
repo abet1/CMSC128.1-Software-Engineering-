@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
-import { TransactionType, PaymentStatus } from '@/types';
+import { TransactionType, PaymentStatus, SplitType } from '@/types';
 import { ArrowLeft, Users } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export function toLocalDateTime(date: string): string {
   const [year, month, day] = date.split('-');
@@ -18,15 +19,17 @@ export function toLocalDateTime(date: string): string {
 
 export default function ExpensePage() {
   const navigate = useNavigate();
-  const { persons, groups, addTransaction, divideEqually } = useApp();
+  const { persons, groups, addTransaction, divideEqually, divideByPercentage, divideByAmount } = useApp();
   const { toast } = useToast();
-  
+
   const [entryName, setEntryName] = useState('');
   const [description, setDescription] = useState('');
   const [groupId, setGroupId] = useState('');
   const [amountBorrowed, setAmountBorrowed] = useState('');
   const [dateBorrowed, setDateBorrowed] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [notes, setNotes] = useState('');
+  const [splitType, setSplitType] = useState<SplitType>('EQUAL');
+  const [memberSplits, setMemberSplits] = useState<Record<string, string>>({});
 
   const LENDER_ID = '49e46789-d54e-4cb1-af9b-8af4e452a001';
 
@@ -89,8 +92,22 @@ export default function ExpensePage() {
       description: 'Group expense created successfully',
     });
 
-    // Optionally, divide equally using your context
-    divideEqually(createdTransaction.referenceID, groupId);
+    // Divide using context based on split type
+    if (splitType === 'EQUAL') {
+      divideEqually(createdTransaction.id, groupId);
+    } else if (splitType === 'PERCENTAGE') {
+      const percentages: Record<string, number> = {};
+      Object.entries(memberSplits).forEach(([pid, val]) => {
+        percentages[pid] = parseFloat(val) || 0;
+      });
+      divideByPercentage(createdTransaction.id, percentages);
+    } else {
+      const amounts: Record<string, number> = {};
+      Object.entries(memberSplits).forEach(([pid, val]) => {
+        amounts[pid] = parseFloat(val) || 0;
+      });
+      divideByAmount(createdTransaction.id, amounts);
+    }
 
     navigate('/');
   } catch (err: any) {
@@ -104,6 +121,39 @@ export default function ExpensePage() {
 
   const selectedGroup = groups.find(g => g.id === groupId);
   const [searchParams] = useSearchParams();
+
+  // Auto-initialize member splits when group or splitType changes
+  useEffect(() => {
+    if (!selectedGroup || selectedGroup.members.length === 0) return;
+    const total = parseFloat(amountBorrowed) || 0;
+    const count = selectedGroup.members.length;
+    const init: Record<string, string> = {};
+    if (splitType === 'EQUAL') {
+      const share = count > 0 ? (total / count).toFixed(2) : '0.00';
+      selectedGroup.members.forEach(m => { init[m.id] = share; });
+    } else if (splitType === 'PERCENTAGE') {
+      const pct = count > 0 ? (100 / count).toFixed(2) : '0.00';
+      selectedGroup.members.forEach(m => { init[m.id] = pct; });
+    } else {
+      selectedGroup.members.forEach(m => { init[m.id] = ''; });
+    }
+    setMemberSplits(init);
+  }, [selectedGroup, splitType, amountBorrowed]);
+
+  // Validation for split
+  const totalSplitPercent = useMemo(
+    () => Object.values(memberSplits).reduce((s, v) => s + (parseFloat(v) || 0), 0),
+    [memberSplits]
+  );
+  const totalSplitAmount = useMemo(
+    () => Object.values(memberSplits).reduce((s, v) => s + (parseFloat(v) || 0), 0),
+    [memberSplits]
+  );
+  const isSplitValid = useMemo(() => {
+    if (splitType === 'EQUAL') return true;
+    if (splitType === 'PERCENTAGE') return Math.abs(totalSplitPercent - 100) < 0.01;
+    return Math.abs(totalSplitAmount - (parseFloat(amountBorrowed) || 0)) < 0.01;
+  }, [splitType, totalSplitPercent, totalSplitAmount, amountBorrowed]);
 
   // Get selected group from URL params
   useEffect(() => {
@@ -211,16 +261,90 @@ export default function ExpensePage() {
             </div>
 
             {selectedGroup && (
-              <div className="p-5 rounded-xl bg-primary/5 border border-primary/20">
-                <p className="text-sm font-medium text-foreground mb-2">Amount per person:</p>
-                <p className="text-2xl font-bold text-primary">
-                  ₱{amountBorrowed && !isNaN(parseFloat(amountBorrowed))
-                    ? (parseFloat(amountBorrowed) / selectedGroup.members.length).toFixed(2)
-                    : '0.00'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Will be automatically divided equally among {selectedGroup.members.length} members
-                </p>
+              <div className="space-y-3">
+                {/* Split type selector */}
+                <Label>Split Method</Label>
+                <div className="flex gap-1 p-1 bg-muted rounded-xl">
+                  {([
+                    { key: 'EQUAL' as SplitType, label: 'Equal' },
+                    { key: 'PERCENTAGE' as SplitType, label: 'By %' },
+                    { key: 'EXACT_AMOUNT' as SplitType, label: 'By Amount' },
+                  ]).map(opt => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setSplitType(opt.key)}
+                      className={cn(
+                        'flex-1 py-2 rounded-lg text-sm font-medium transition-all',
+                        splitType === opt.key
+                          ? 'bg-card text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Member rows */}
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+                  <p className="text-sm font-medium text-foreground">Split Preview</p>
+                  {selectedGroup.members.map(member => {
+                    const val = memberSplits[member.id] ?? '';
+                    const numVal = parseFloat(val) || 0;
+                    const total = parseFloat(amountBorrowed) || 0;
+                    const derivedAmount = splitType === 'PERCENTAGE' ? (total * numVal) / 100 : numVal;
+                    const derivedPercent = splitType === 'EXACT_AMOUNT' && total > 0 ? (numVal / total) * 100 : numVal;
+
+                    return (
+                      <div key={member.id} className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-primary font-bold text-xs">
+                            {member.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="flex-1 text-sm font-medium text-foreground truncate">{member.name}</span>
+                        {splitType === 'EQUAL' ? (
+                          <span className="text-sm font-semibold text-primary">₱{val}</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={val}
+                              onChange={e => setMemberSplits(prev => ({ ...prev, [member.id]: e.target.value }))}
+                              className="h-8 w-24 text-sm text-right"
+                              placeholder={splitType === 'PERCENTAGE' ? '%' : '₱'}
+                            />
+                            <span className="text-xs text-muted-foreground w-20 text-right">
+                              {splitType === 'PERCENTAGE'
+                                ? `= ₱${derivedAmount.toFixed(2)}`
+                                : `= ${derivedPercent.toFixed(1)}%`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Validation summary */}
+                  {splitType === 'PERCENTAGE' && (
+                    <p className={cn('text-xs font-medium mt-1', Math.abs(totalSplitPercent - 100) < 0.01 ? 'text-success' : 'text-destructive')}>
+                      Total: {totalSplitPercent.toFixed(1)}% {Math.abs(totalSplitPercent - 100) < 0.01 ? '✓' : '(must equal 100%)'}
+                    </p>
+                  )}
+                  {splitType === 'EXACT_AMOUNT' && (
+                    <p className={cn('text-xs font-medium mt-1', isSplitValid ? 'text-success' : 'text-destructive')}>
+                      Total: ₱{totalSplitAmount.toFixed(2)} of ₱{(parseFloat(amountBorrowed) || 0).toFixed(2)} {isSplitValid ? '✓' : '(must equal total)'}
+                    </p>
+                  )}
+                  {splitType === 'EQUAL' && (
+                    <p className="text-xs text-muted-foreground">
+                      Divided equally among {selectedGroup.members.length} members
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -245,7 +369,7 @@ export default function ExpensePage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1 h-12" disabled={!groupId}>
+              <Button type="submit" className="flex-1 h-12" disabled={!groupId || !isSplitValid}>
                 Create Expense
               </Button>
             </div>

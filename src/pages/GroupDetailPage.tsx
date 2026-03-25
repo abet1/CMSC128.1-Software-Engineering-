@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
-import { ArrowLeft, Users, Edit2, Trash2, FileText, User } from 'lucide-react';
+import { ArrowLeft, Users, Edit2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -15,13 +15,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Progress } from '@/components/ui/progress';
+import { formatCurrencyCompact } from '@/types';
+import { cn } from '@/lib/utils';
+import { calculateGroupMemberBalances, simplifyDebts } from '@/utils/groupBalanceUtils';
 
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { groups, transactions, deleteGroup } = useApp();
+  const { groups, transactions, paymentAllocations, deleteGroup } = useApp();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSimplified, setShowSimplified] = useState(false);
 
   const group = groups.find(g => g.id === id);
 
@@ -41,6 +46,18 @@ export default function GroupDetailPage() {
 
   // Get related transactions
   const relatedTransactions = transactions.filter(t => t.borrowerGroupId === group.id);
+
+  const totalGroupExpense = relatedTransactions.reduce((s, t) => s + (t.amountBorrowed ?? 0), 0);
+
+  const memberBalances = useMemo(
+    () => calculateGroupMemberBalances(group, transactions, paymentAllocations),
+    [group, transactions, paymentAllocations]
+  );
+
+  const simplifiedDebts = useMemo(
+    () => simplifyDebts(memberBalances),
+    [memberBalances]
+  );
 
   const handleDelete = () => {
     // Check if group has active transactions
@@ -137,6 +154,78 @@ export default function GroupDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Group Balances */}
+          {totalGroupExpense > 0 && (
+            <div className="bg-card rounded-2xl lg:rounded-3xl p-6 lg:p-8 border border-border/50 shadow-soft">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display text-lg font-semibold text-foreground">Group Balances</h3>
+                <span className="text-sm text-muted-foreground">
+                  Total: {formatCurrencyCompact(totalGroupExpense)}
+                </span>
+              </div>
+
+              {memberBalances.length > 0 ? (
+                <div className="space-y-4">
+                  {memberBalances.map(mb => (
+                    <div key={mb.memberId} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-foreground">{mb.name}</span>
+                        <span className={mb.amountOwed > 0.009 ? 'text-destructive font-medium' : 'text-success font-medium'}>
+                          {mb.amountOwed > 0.009
+                            ? `Owes ${formatCurrencyCompact(mb.amountOwed)}`
+                            : 'Settled'}
+                        </span>
+                      </div>
+                      <Progress
+                        value={mb.totalShare > 0 ? (mb.amountPaid / mb.totalShare) * 100 : 0}
+                        className="h-1.5"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Paid {formatCurrencyCompact(mb.amountPaid)} of {formatCurrencyCompact(mb.totalShare)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No allocations recorded yet. Create a group expense to track balances.
+                </p>
+              )}
+
+              {/* Simplify Debts */}
+              {simplifiedDebts.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border/50">
+                  <button
+                    onClick={() => setShowSimplified(s => !s)}
+                    className="flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+                  >
+                    {showSimplified ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {showSimplified ? 'Hide simplified debts' : 'Simplify Debts'}
+                  </button>
+                  {showSimplified && (
+                    <div className="mt-3 space-y-2">
+                      {simplifiedDebts.map((d, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border/50 text-sm"
+                        >
+                          <span className="text-foreground">
+                            <span className="font-medium">{d.fromMemberName}</span>
+                            <span className="text-muted-foreground mx-1.5">→</span>
+                            <span className="font-medium">{d.toMemberName}</span>
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {formatCurrencyCompact(d.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Related Transactions */}
           {relatedTransactions.length > 0 && (

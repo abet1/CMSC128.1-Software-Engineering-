@@ -20,8 +20,36 @@ export interface Person {
   nickname?: string;
   phone?: string;
   email?: string;
+  notes?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+// ── Splitwise-like types ───────────────────────────────────────────────────────
+
+export type SplitType = 'EQUAL' | 'PERCENTAGE' | 'EXACT_AMOUNT';
+
+export interface PersonBalance {
+  personId: string;
+  receivable: number;  // they owe you
+  payable: number;     // you owe them
+  net: number;         // positive = they owe you
+}
+
+export interface GroupMemberBalance {
+  memberId: string;
+  name: string;
+  totalShare: number;
+  amountPaid: number;
+  amountOwed: number;
+}
+
+export interface DebtSimplification {
+  fromMemberId: string;
+  fromMemberName: string;
+  toMemberId: string;
+  toMemberName: string;
+  amount: number;
 }
 
 export interface Group {

@@ -56,6 +56,8 @@ interface AppContextType {
   addPaymentAllocation: (allocation: Omit<PaymentAllocation, 'id'>) => PaymentAllocation;
   updatePaymentAllocation: (id: string, updates: Partial<PaymentAllocation>) => void;
   divideEqually: (transactionId: string, groupId: string) => void;
+  divideByPercentage: (transactionId: string, percentages: Record<string, number>) => void;
+  divideByAmount: (transactionId: string, amounts: Record<string, number>) => void;
   
   // Notifications
   clearNotification: (notificationId: string) => void;
@@ -423,25 +425,62 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const divideEqually = useCallback((transactionId: string, groupId: string) => {
     const transaction = transactions.find(t => t.id === transactionId);
     const group = groups.find(g => g.id === groupId);
-    if (!transaction || !group) return;
+    if (!transaction || !group || group.members.length === 0) return;
 
-    const amountPerPerson = transaction.amountBorrowed / group.members.length;
-    const percentagePerPerson = 100 / group.members.length;
+    const amountPerPerson = (transaction.amountBorrowed ?? 0) / group.members.length;
+    const percentPerPerson = 100 / group.members.length;
 
-    // Remove existing allocations
     setPaymentAllocations(prev => prev.filter(a => a.transactionId !== transactionId));
 
-    // Add new equal allocations
     group.members.forEach(member => {
       addPaymentAllocation({
         transactionId,
-        payeeContactId: member.id,
-        amount: amountPerPerson,
-        percentageOfTotal: percentagePerPerson,
-        status: 'UNPAID',
+        personId: member.id,
+        allocated_amount: amountPerPerson,
+        allocated_percent: percentPerPerson,
+        amount_paid: 0,
+        is_fully_paid: false,
       });
     });
   }, [transactions, groups, addPaymentAllocation]);
+
+  const divideByPercentage = useCallback((transactionId: string, percentages: Record<string, number>) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (!transaction) return;
+    const total = transaction.amountBorrowed ?? 0;
+
+    setPaymentAllocations(prev => prev.filter(a => a.transactionId !== transactionId));
+
+    Object.entries(percentages).forEach(([personId, percent]) => {
+      addPaymentAllocation({
+        transactionId,
+        personId,
+        allocated_amount: (total * percent) / 100,
+        allocated_percent: percent,
+        amount_paid: 0,
+        is_fully_paid: false,
+      });
+    });
+  }, [transactions, addPaymentAllocation]);
+
+  const divideByAmount = useCallback((transactionId: string, amounts: Record<string, number>) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (!transaction) return;
+    const total = transaction.amountBorrowed ?? 0;
+
+    setPaymentAllocations(prev => prev.filter(a => a.transactionId !== transactionId));
+
+    Object.entries(amounts).forEach(([personId, amount]) => {
+      addPaymentAllocation({
+        transactionId,
+        personId,
+        allocated_amount: amount,
+        allocated_percent: total > 0 ? (amount / total) * 100 : 0,
+        amount_paid: 0,
+        is_fully_paid: false,
+      });
+    });
+  }, [transactions, addPaymentAllocation]);
 
   // Notifications
   const clearNotification = useCallback((notificationId: string) => {
@@ -485,6 +524,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addPaymentAllocation,
     updatePaymentAllocation,
     divideEqually,
+    divideByPercentage,
+    divideByAmount,
     clearNotification,
     clearAllNotifications,
   };
