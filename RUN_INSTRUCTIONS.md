@@ -1,214 +1,108 @@
-# How to Run the Loan Tracker Application
+# How to Run the Loan Tracker Application (Supabase-Only)
 
 ## Prerequisites
 
-1. **Java 21** - Install JDK 21
-2. **Node.js 18+** - Install Node.js (v18 or higher)
-3. **PostgreSQL** - Install and run PostgreSQL server
-4. **Maven** - For building/running the backend (or use Maven wrapper)
-5. **npm/yarn/pnpm** - For frontend dependencies
+1. **Node.js 18+**
+2. **npm/yarn/pnpm**
+3. A **Supabase project** with access to SQL Editor
 
 ---
 
-## Step 1: Set Up PostgreSQL Database
+## Step 1: Configure Environment Variables
 
-1. **Start PostgreSQL service** (if not already running)
+Create `.env.local` in the project root:
 
-2. **Create the database:**
-   ```sql
-   CREATE DATABASE loan_tracker;
-   ```
-
-3. **Update database credentials** in `src/main/resources/application.properties`:
-   ```properties
-   spring.datasource.username=your_username
-   spring.datasource.password=your_password
-   ```
+```properties
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_or_publishable_key
+```
 
 ---
 
-## Step 2: Run the Backend (Spring Boot)
+## Step 2: Apply Supabase Migrations
 
-### Option A: Using Maven (Recommended)
+Run these SQL files in Supabase SQL Editor, in order:
 
-1. **Navigate to project root:**
-   ```bash
-   cd "C:\Users\Abet Caro\Desktop\CMSC127 MP\CMSC127-Loan-Tracker"
-   ```
+1. `supabase/migrations/20260415_001_init_loan_tracker.sql`
+2. `supabase/migrations/20260505_002_record_payment_atomic.sql`
+3. `supabase/migrations/20260505_003_update_delete_payment_atomic.sql`
 
-2. **Install dependencies and run:**
-   ```bash
-   mvn clean install
-   mvn spring-boot:run
-   ```
-
-   Or in one command:
-   ```bash
-   mvn clean spring-boot:run
-   ```
-
-### Option B: Using IDE (IntelliJ IDEA / Eclipse)
-
-1. Open the project in your IDE
-2. Locate `ProjectApplication.java` in `src/main/java/com/example/project/`
-3. Right-click → Run `ProjectApplication`
-
-### Verify Backend is Running
-
-- Backend should start on **http://localhost:8080**
-- Check console for: `Started ProjectApplication`
-- Test: Open **http://localhost:8080/swagger-ui.html** (Swagger API docs)
-- Test API: **http://localhost:8080/api/persons** (should return empty array or data)
+This creates tables, RLS policies, triggers, and payment RPC functions.
 
 ---
 
-## Step 3: Run the Frontend (React/Vite)
+## Step 3: Run the Frontend
 
-**Note:** Frontend is configured to run on port **8081** (backend uses 8080). CORS is already configured.
+1. Install dependencies:
 
-1. **Install frontend dependencies:**
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
+```bash
+npm install
+```
 
-4. **Start the development server:**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   ```
+2. Start dev server:
 
-### Verify Frontend is Running
+```bash
+npm run dev
+```
 
-- Frontend should start on **http://localhost:8081** (or the port you configured)
-- Open browser to see the Loan Tracker app
+3. Open the shown local URL (commonly `http://localhost:5173`).
 
 ---
 
-## Step 4: Verify Everything Works
+## Step 4: Verify Core Flows
 
-1. **Backend Health Check:**
-   - Swagger UI: http://localhost:8080/swagger-ui.html
-   - API Test: http://localhost:8080/api/persons
-   - API Test: http://localhost:8080/api/groups
+1. Sign in (anonymous auth supported).
+2. Add a contact.
+3. Create a lend/borrow/group expense transaction.
+4. Record a payment and refresh page (data should persist).
+5. Update payment and verify remaining balance updates.
+6. Delete payment and verify balance/instalment states recalculate.
 
-2. **Frontend Health Check:**
-   - Open: http://localhost:8081
-   - Check browser console for any errors
-   - Try creating a contact/person
+---
 
-3. **Integration Test:**
-   - Create a person in the frontend
-   - Check if it appears in backend API: http://localhost:8080/api/persons
-   - Create a loan entry
-   - Check database or API to verify it was saved
+## Payment Regression Checklist
+
+- [ ] `addPayment` persists and survives refresh.
+- [ ] `updatePayment` updates `payments`, `loan_entries`, and related `installments`.
+- [ ] `deletePayment` restores `loan_entries.amount_remaining` and installment progress.
+- [ ] Group-expense payment with `payeeId` persists correctly.
+- [ ] Installment payment updates term `amount_paid`, `status`, and `paid_date`.
+- [ ] No RLS errors while user accesses only own rows.
 
 ---
 
 ## Troubleshooting
 
-### Backend Issues
+**Supabase auth/session issues:**
+- Check browser console and Supabase Auth settings (anonymous sign-in enabled if needed).
 
-**Port 8080 already in use:**
-- Change backend port in `application.properties`:
-  ```properties
-  server.port=8082
+**Migration/RPC errors:**
+- Re-run migration SQL in order and confirm functions exist:
+  - `record_payment_atomic`
+  - `update_payment_atomic`
+  - `delete_payment_atomic`
+
+**Frontend build issues:**
+- Delete `node_modules` and reinstall:
+  ```bash
+  rm -rf node_modules package-lock.json
+  npm install
   ```
-- Update frontend API calls to use new port
-
-**Database connection error:**
-- Verify PostgreSQL is running
-- Check credentials in `application.properties`
-- Ensure database `loan_tracker` exists
-
-**Maven build fails:**
-- Run `mvn clean` first
-- Check Java version: `java -version` (should be 21)
-- Ensure Maven is installed: `mvn -version`
-
-### Frontend Issues
-
-**Port conflict:**
-- Change Vite port in `vite.config.ts` to 8081 or 5173
-- Update CORS in backend to match
-
-**API connection errors:**
-- Verify backend is running on port 8080
-- Check browser console for CORS errors
-- Verify API URL in frontend code matches backend port
-
-**Module not found errors:**
-- Delete `node_modules` and `package-lock.json`
-- Run `npm install` again
-
----
-
-## Quick Start Commands
-
-### Terminal 1 (Backend):
-```bash
-cd "C:\Users\Abet Caro\Desktop\CMSC127 MP\CMSC127-Loan-Tracker"
-mvn spring-boot:run
-```
-
-### Terminal 2 (Frontend):
-```bash
-cd "C:\Users\Abet Caro\Desktop\CMSC127 MP\CMSC127-Loan-Tracker"
-npm run dev
-```
 
 ---
 
 ## Production Build
 
-### Build Backend:
-```bash
-mvn clean package
-java -jar target/project-0.0.1-SNAPSHOT.jar
-```
-
-### Build Frontend:
 ```bash
 npm run build
-npm run preview  # Preview production build
+npm run preview
 ```
-
----
-
-## Default Ports
-
-- **Backend API:** http://localhost:8080
-- **Frontend App:** http://localhost:8081 (or 5173)
-- **Swagger UI:** http://localhost:8080/swagger-ui.html
-- **API Base URL:** http://localhost:8080/api
-
----
-
-## Database Schema
-
-The database schema will be **automatically created** by Hibernate on first run (due to `spring.jpa.hibernate.ddl-auto=update`).
-
-Tables created:
-- `persons`
-- `user_groups`
-- `group_members`
-- `loan_entries`
-- `installment_details`
-- `payment_records`
-- `payment_allocations`
 
 ---
 
 ## Need Help?
 
-- Check console logs for errors
-- Verify all prerequisites are installed
-- Ensure PostgreSQL is running
-- Check that ports are not in use by other applications
+- Check browser console and Supabase logs.
+- Verify `.env.local` keys are valid.
+- Verify migrations were applied in correct order.
 

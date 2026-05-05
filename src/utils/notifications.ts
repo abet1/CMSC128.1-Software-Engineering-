@@ -23,24 +23,27 @@ export const getDueNotificationsFromData = (
     if (!transaction) return;
 
     plan.installments.forEach(installment => {
-      if (installment.status === 'DELINQUENT') {
+      const dueDate = new Date(installment.dueDate);
+      if (Number.isNaN(dueDate.getTime())) return;
+
+      if (installment.status === 'OVERDUE') {
         notifications.push({
           id: `notif-${installment.id}`,
           title: `Overdue: ${transaction.entryName}`,
-          description: `Term ${installment.termNumber} is past due`,
+          description: `Term ${installment.termNumber ?? '-'} is past due`,
           type: 'overdue',
           amount: installment.amountDue,
-          dueDate: installment.dueDate,
+          dueDate,
           transactionId: transaction.id,
         });
-      } else if (installment.status === 'UNPAID' && installment.dueDate <= nextWeek) {
+      } else if (installment.status === 'UNPAID' && dueDate <= nextWeek) {
         notifications.push({
           id: `notif-${installment.id}`,
           title: `Upcoming: ${transaction.entryName}`,
-          description: `Term ${installment.termNumber} due soon`,
+          description: `Term ${installment.termNumber ?? '-'} due soon`,
           type: 'upcoming',
           amount: installment.amountDue,
-          dueDate: installment.dueDate,
+          dueDate,
           transactionId: transaction.id,
         });
       }

@@ -16,7 +16,6 @@ export default function EditContactPage() {
   const { toast } = useToast();
   
   const [person, setPerson] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -24,32 +23,19 @@ export default function EditContactPage() {
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
-  if (!id) return;
-
-  const fetchPerson = async () => {
-    try {
-      const res = await fetch(`http://localhost:8080/api/persons/${id}`);
-
-      if (!res.ok) throw new Error('Not found');
-
-      const data = await res.json();
-      setPerson(data);
-
-      setName(data.name);
-      setPhone(data.phone || '');
-      setEmail(data.email || '');
-      setNotes(data.notes || '');
-
-    } catch (error) {
-      console.error(error);
+    if (!id) return;
+    const data = persons.find(p => String(p.id) === String(id));
+    if (!data) {
       setPerson(null);
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
 
-  fetchPerson();
-}, [id]);
+    setPerson(data);
+    setName(data.name ?? '');
+    setPhone(data.phone || '');
+    setEmail(data.email || '');
+    setNotes(data.notes || '');
+  }, [id, persons]);
 
   if (!person) {
     return (
@@ -82,23 +68,11 @@ export default function EditContactPage() {
   };
 
   try {
-    const res = await fetch(`http://localhost:8080/api/persons/${person.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) throw new Error('Update failed');
-
-  const updatedPerson = await res.json();
-
     updatePerson(person.id, {
-      name: updatedPerson.name,
-      phone: updatedPerson.phone,
-      email: updatedPerson.email,
-      notes: updatedPerson.notes,
+      name: payload.name,
+      phone: payload.phone ?? undefined,
+      email: payload.email ?? undefined,
+      notes: payload.notes ?? undefined,
     });
 
 

@@ -23,14 +23,17 @@ export default function LoginPage() {
   const [showGuest, setShowGuest]   = useState(false);
   const [loading, setLoading]       = useState(false);
 
-  const handleGuestSignIn = (e: React.FormEvent) => {
+  const handleGuestSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName.trim()) return;
     setLoading(true);
-    setTimeout(() => {
-      signInAsGuest(guestName.trim(), guestEmail.trim() || undefined);
+    try {
+      await signInAsGuest(guestName.trim(), guestEmail.trim() || undefined);
       navigate('/');
-    }, 400);
+    } catch (error) {
+      console.error('Failed to sign in guest:', error);
+      setLoading(false);
+    }
   };
 
   const initials = (name: string) =>
@@ -201,7 +204,7 @@ export default function LoginPage() {
           )}
 
           <p className="text-xs text-muted-foreground text-center mt-6 leading-relaxed">
-            Guest sessions are saved locally on this device.
+            Guest sessions now use Supabase anonymous auth.
             <br />Google sign-in coming soon via Supabase.
           </p>
         </div>

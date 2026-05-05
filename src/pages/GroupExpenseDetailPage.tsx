@@ -3,11 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { ProgressBar } from '@/components/ProgressBar';
 import { AddPaymentModal } from '@/components/AddPaymentModal';
-import { mockExpenses, mockPayments } from '@/api/mock';
+import { useApp } from '@/context/AppContext';
 import {
   personFullName,
   personInitials,
-  expenseProgress,
   formatCurrencyCompact,
 } from '@/types';
 import type { GroupExpenseAllocation } from '@/types';
@@ -32,8 +31,9 @@ export default function GroupExpenseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [selectedAllocation, setSelectedAllocation] = useState<GroupExpenseAllocation | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const { transactions, payments, paymentAllocations, persons, groups } = useApp();
 
-  const expense = mockExpenses.find((e) => e.id === id && e.is_group_expense);
+  const expense = transactions.find((t) => t.id === id && t.transactionType === 'GROUP_EXPENSE');
 
   if (!expense) {
     return (
@@ -51,12 +51,15 @@ export default function GroupExpenseDetailPage() {
     );
   }
 
-  const expensePayments = mockPayments.filter((p) => p.expense_id === expense.id);
-  const progress = expenseProgress(expense);
-  const groupName = expense.renter_group?.group_name ?? '—';
-  const allocations = expense.allocations ?? [];
-
-  const totalPaid = allocations.reduce((sum, a) => sum + a.amount_paid, 0);
+  const expensePayments = payments.filter((p) => p.transactionId === expense.id);
+  const amountBorrowed = Number(expense.amountBorrowed ?? 0);
+  const amountRemaining = Number(expense.amountRemaining ?? amountBorrowed);
+  const totalPaid = Math.max(0, amountBorrowed - amountRemaining);
+  const progress = amountBorrowed > 0 ? Math.min((totalPaid / amountBorrowed) * 100, 100) : 0;
+  const groupName = groups.find((g) => g.id === expense.borrowerGroupId)?.name ?? '—';
+  const allocations = paymentAllocations
+    .filter((a) => a.transactionId === expense.id)
+    .map((a) => ({ ...a, person: persons.find((p) => p.id === a.personId) }));
 
   function openPayFor(allocation: GroupExpenseAllocation) {
     setSelectedAllocation(allocation);
@@ -87,11 +90,6 @@ export default function GroupExpenseDetailPage() {
               {expense.description}
             </h1>
             <div className="flex items-center gap-1.5 shrink-0">
-              {expense.payment_allocation_type && (
-                <span className="text-xs border border-border text-muted-foreground rounded px-1.5 py-0.5">
-                  {expense.payment_allocation_type}
-                </span>
-              )}
               <span className={cn('text-sm font-medium', statusClass(expense.status))}>
                 {expense.status.replace('_', ' ')}
               </span>
@@ -100,12 +98,12 @@ export default function GroupExpenseDetailPage() {
 
           {/* Group name + amount */}
           <p className="text-xs text-muted-foreground">
-            {groupName} · {formatCurrencyCompact(expense.amount)}
+            {groupName} · {formatCurrencyCompact(amountBorrowed)}
           </p>
 
           {/* Total amount */}
           <p className="text-2xl font-bold text-foreground">
-            {formatCurrencyCompact(expense.amount)}
+            {formatCurrencyCompact(amountBorrowed)}
           </p>
 
           {/* Overall progress */}
@@ -117,7 +115,7 @@ export default function GroupExpenseDetailPage() {
               {formatCurrencyCompact(totalPaid)} paid
             </span>
             <span className="text-muted-foreground">
-              of {formatCurrencyCompact(expense.amount)}
+              of {formatCurrencyCompact(amountBorrowed)}
             </span>
           </div>
         </div>
@@ -128,11 +126,9 @@ export default function GroupExpenseDetailPage() {
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Members
             </p>
-            {expense.payment_allocation_type && (
-              <span className="text-xs border border-border text-muted-foreground rounded px-1.5 py-0.5">
-                {expense.payment_allocation_type}
-              </span>
-            )}
+            <span className="text-xs border border-border text-muted-foreground rounded px-1.5 py-0.5">
+              Allocation
+            </span>
           </div>
 
           {allocations.length === 0 ? (
@@ -203,7 +199,7 @@ export default function GroupExpenseDetailPage() {
               {expensePayments.map((pay) => {
                 const payerName = pay.payee_person
                   ? personFullName(pay.payee_person)
-                  : '—';
+                  : persons.find((p) => p.id === pay.payeeId)?.name ?? '—';
                 return (
                   <div key={pay.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 min-w-0">
@@ -211,7 +207,7 @@ export default function GroupExpenseDetailPage() {
                       <p className="text-xs text-muted-foreground">{formatDate(pay.payment_date)}</p>
                     </div>
                     <span className="text-sm font-medium text-primary shrink-0">
-                      {formatCurrencyCompact(pay.amount)}
+                      {formatCurrencyCompact(Number(pay.paymentAmount ?? 0))}
                     </span>
                   </div>
                 );

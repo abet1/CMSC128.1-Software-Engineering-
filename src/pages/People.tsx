@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { useApp } from '@/context/AppContext';
@@ -22,21 +22,13 @@ type TabType = 'contacts' | 'groups';
 const People = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { groups, transactions, paymentAllocations, addPerson } = useApp();
+  const { persons, groups, transactions, paymentAllocations, addPerson } = useApp();
   const { toast } = useToast();
-  const [persons, setPersons] = useState<Person[]>([]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [tab, setTab] = useState<TabType>('contacts');
   const [isImporting, setIsImporting] = useState(false);
   const contactsSupported = isContactsApiSupported();
-
-  useEffect(() => {
-    fetch('http://localhost:8080/api/persons')
-      .then(res => res.json())
-      .then(data => setPersons(Array.isArray(data) ? data : data.data ?? []))
-      .catch(err => console.error('Error fetching contacts:', err));
-  }, []);
 
   const contacts = persons.filter(p => p.id !== user?.id);
 
@@ -83,24 +75,12 @@ const People = () => {
           continue;
         }
         try {
-          const res = await fetch('http://localhost:8080/api/persons', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: contact.name, phone: contact.phone, email: contact.email }),
-          });
-          if (res.ok) {
-            const newPerson: Person = await res.json();
-            addPerson(newPerson);
-            imported++;
-          }
+          addPerson({ name: contact.name, phone: contact.phone, email: contact.email });
+          imported++;
         } catch {
           // skip failed individual contacts
         }
       }
-
-      // Refresh person list
-      const refreshed = await fetch('http://localhost:8080/api/persons').then(r => r.json());
-      setPersons(Array.isArray(refreshed) ? refreshed : []);
 
       toast({
         title: 'Import complete',

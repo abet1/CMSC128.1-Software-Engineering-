@@ -2,7 +2,7 @@
 
 export type TransactionType      = 'LEND' | 'BORROW' | 'GROUP_EXPENSE' | 'STRAIGHT_EXPENSE' | 'INSTALLMENT_EXPENSE';
 export type PaymentFrequency     = 'WEEKLY' | 'MONTHLY' | 'ANNUALLY';
-export type InstallmentStatus    = 'PENDING' | 'PAID' | 'SKIPPED';
+export type InstallmentStatus    = 'PENDING' | 'UNPAID' | 'PAID' | 'SKIPPED' | 'OVERDUE';
 export type TransactionDirection = 'IN' | 'OUT';
 export type PaymentStatus        = 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
 
@@ -115,6 +115,7 @@ export interface PaymentAllocation {
 
 export interface Installment {
   id: string;
+  termNumber?: number;
   dueDate: string;
   amountDue: number;
   amountPaid: number;
@@ -180,7 +181,7 @@ export function calculateNextPaymentDate(current: string, frequency: PaymentFreq
   return d.toISOString().split('T')[0];
 }
 
-export const calculateInstallmentStatus = (installment: Installment): InstallmentStatus | 'OVERDUE' | 'UNPAID' => {
+export const calculateInstallmentStatus = (installment: Installment): InstallmentStatus => {
   if (installment.amountPaid >= installment.amountDue) return 'PAID';
   if (installment.status === 'SKIPPED') return 'SKIPPED';
   const dueDate = new Date(installment.dueDate);

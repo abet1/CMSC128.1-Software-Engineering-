@@ -47,7 +47,7 @@ export function RecordPaymentDialog({ open, onOpenChange, transactionId }: Recor
   }
 
   const availableInstallments = installmentPlan?.installments.filter(
-    inst => inst.status === 'UNPAID' || inst.status === 'DELINQUENT'
+    inst => inst.status === 'UNPAID' || inst.status === 'OVERDUE'
   ) || [];
 
   const maxAmount = transaction.amountRemaining;
@@ -101,6 +101,7 @@ export function RecordPaymentDialog({ open, onOpenChange, transactionId }: Recor
       installmentId: installmentId || undefined,
       paymentDate: new Date(paymentDate),
       paymentAmount: amount,
+      payeeId: payeeId || undefined,
       notes: notes || undefined,
     });
 

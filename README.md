@@ -50,7 +50,7 @@ A modern Progressive Web App (PWA) for tracking and managing loans, expenses, an
 - **Payment Tracking**
   - Record payments for transactions
   - Installment plan management
-  - Payment status tracking (Paid, Partially Paid, Unpaid, Delinquent)
+- Payment status tracking (Paid, Partially Paid, Unpaid, Overdue)
   - Skip installment functionality
   - Payment allocation for group expenses
 
@@ -154,7 +154,7 @@ npm install
 npm run dev
 ```
 
-The application will be available at `http://localhost:8080`
+The application will be available at `http://localhost:5173` (or the next free Vite port).
 
 ## 💻 Development
 
@@ -179,7 +179,7 @@ npm run lint
 
 ### Development Server
 
-The development server runs on port `8080` by default and includes:
+The development server runs on a Vite port (commonly `5173`) and includes:
 - Hot Module Replacement (HMR)
 - Fast refresh for React components
 - TypeScript type checking
@@ -283,14 +283,13 @@ loan-tracker-cs127/
 - **PAID** - Fully paid
 - **PARTIALLY_PAID** - Partially paid
 - **UNPAID** - Not yet paid
-- **DELINQUENT** - Overdue payment
+- **OVERDUE** - Overdue payment
 
 ### Installment Status
 
-- **NOT_STARTED** - Plan hasn't started yet
 - **UNPAID** - Due but not paid
 - **PAID** - Installment paid
-- **DELINQUENT** - Overdue
+- **OVERDUE** - Overdue
 - **SKIPPED** - Installment skipped
 
 ### Payment Frequency
@@ -403,11 +402,12 @@ netlify deploy --prod
 
 ### Environment Variables
 
-The app starts with empty data. For production:
-- Connect to a backend API for data persistence
-- Configure environment variables for API endpoints
-- Set up authentication if needed
-- Implement data synchronization and offline support
+The app uses Supabase directly for auth and persistence. Set:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Also ensure Supabase migrations in `supabase/migrations` are applied.
 
 ## 🧪 Testing
 
@@ -495,7 +495,7 @@ Ready to start? Follow these steps:
 
 1. **Install dependencies**: `npm install`
 2. **Start dev server**: `npm run dev`
-3. **Open browser**: Navigate to `http://localhost:8080`
+3. **Open browser**: Navigate to your Vite URL (usually `http://localhost:5173`)
 4. **Explore the app**: Try creating transactions, adding contacts, and recording payments!
 
 ---

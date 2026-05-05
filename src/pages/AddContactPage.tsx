@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -45,26 +45,7 @@ export default function AddContactPage() {
     };
 
   try {
-    let newContact: Person;
-
-    try {
-      const res = await fetch('http://localhost:8080/api/persons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Backend unavailable');
-      newContact = await res.json();
-    } catch {
-      // Backend unavailable — create locally
-      newContact = {
-        ...payload,
-        id: `local_${Date.now()}`,
-        createdAt: new Date(),
-      } as Person;
-    }
-
-    addPerson(newContact);
+    const newContact = addPerson(payload);
 
     toast({
       title: 'Contact added',

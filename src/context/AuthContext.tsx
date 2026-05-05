@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient';
 
 export interface AuthUser {
   id: string;
@@ -9,51 +10,118 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  signInAsGuest: (name: string, email?: string) => void;
+  isLoading: boolean;
+  signInAsGuest: (name: string, email?: string) => Promise<void>;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'paymamaya_user';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const toAuthUser = (id: string, email?: string, name?: string): AuthUser => ({
+    id,
+    email: email ?? undefined,
+    name: name?.trim() || email?.split('@')[0] || 'Guest',
   });
 
-  // Persist to localStorage whenever user changes
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+    if (!isSupabaseConfigured) {
+      setUser(null);
+      setIsLoading(false);
+      return;
     }
-  }, [user]);
 
-  const signInAsGuest = (name: string, email?: string) => {
-    const newUser: AuthUser = {
-      id: `guest_${Date.now()}`,
-      name: name.trim(),
-      email: email?.trim() || undefined,
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error || !data.session?.user) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+      const sessionUser = data.session.user;
+      setUser(
+        toAuthUser(
+          sessionUser.id,
+          sessionUser.email,
+          (sessionUser.user_metadata?.full_name as string | undefined) ??
+            (sessionUser.user_metadata?.name as string | undefined)
+        )
+      );
+      setIsLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (!session?.user) {
+        setUser(null);
+        return;
+      }
+      const sessionUser = session.user;
+      setUser(
+        toAuthUser(
+          sessionUser.id,
+          sessionUser.email,
+          (sessionUser.user_metadata?.full_name as string | undefined) ??
+            (sessionUser.user_metadata?.name as string | undefined)
+        )
+      );
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
     };
-    setUser(newUser);
+  }, []);
+
+  const signInAsGuest = async (name: string, email?: string) => {
+    const displayName = name.trim();
+    if (!displayName) return;
+
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured');
+    }
+
+    const { data, error } = await supabase.auth.signInAnonymously({
+      options: {
+        data: {
+          full_name: displayName,
+          email: email?.trim() || undefined,
+        },
+      },
+    });
+    if (error) throw error;
+
+    const anonUser = data.user;
+    if (!anonUser) throw new Error('Anonymous sign in did not return a user');
+    setUser(toAuthUser(anonUser.id, email?.trim() || undefined, displayName));
   };
 
   const signOut = () => {
-    setUser(null);
+    if (!isSupabaseConfigured) {
+      setUser(null);
+      return;
+    }
+    void supabase.auth.signOut().finally(() => setUser(null));
   };
 
-  // TODO: wire Supabase here
-  // const signInWithGoogle = () => supabase.auth.signInWithOAuth({ provider: 'google' })
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      signInAsGuest,
+      signOut,
+    }),
+    [user, isLoading]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, signInAsGuest, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

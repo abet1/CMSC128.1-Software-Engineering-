@@ -53,7 +53,7 @@ export function QuickPaymentSheet({ open, onOpenChange }: QuickPaymentSheetProps
     : null;
 
   const availableInstallments =
-    installmentPlan?.installments.filter(inst => inst.status === 'UNPAID' || inst.status === 'DELINQUENT') || [];
+    installmentPlan?.installments.filter(inst => inst.status === 'UNPAID' || inst.status === 'OVERDUE') || [];
 
   const isGroupExpense = selectedTransaction?.transactionType === 'GROUP_EXPENSE';
   const group = isGroupExpense && selectedTransaction?.borrowerGroupId
@@ -139,6 +139,7 @@ export function QuickPaymentSheet({ open, onOpenChange }: QuickPaymentSheetProps
       installmentId: installmentId && installmentId !== 'none' ? installmentId : undefined,
       paymentDate: new Date(paymentDate),
       paymentAmount: amount,
+      payeeId: payeeId || undefined,
       notes: notes || undefined,
     });
 

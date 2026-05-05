@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -22,36 +22,13 @@ import { calculatePersonBalance, getBalanceLabel } from '@/utils/balanceUtils';
 export default function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { transactions, groups, paymentAllocations, deletePerson } = useApp();
+  const { persons, transactions, groups, paymentAllocations, deletePerson } = useApp();
   const { toast } = useToast();
-  const [person, setPerson] = useState<Person | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-   // Fetch person from backend
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchPerson = async () => {
-      try {
-        const res = await fetch(`http://localhost:8080/api/persons/${id}`);
-        if (!res.ok) throw new Error('Person not found');
-        const data: Person = await res.json();
-        setPerson(data);
-      } catch (err) {
-        console.error(err);
-        toast({
-          title: 'Error',
-          description: 'Could not fetch contact details.',
-        });
-        navigate('/people');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPerson();
-  }, [id, toast, navigate]);
+  const person = useMemo(
+    () => persons.find(p => String(p.id) === String(id)) ?? null,
+    [persons, id]
+  );
 
 
   if (!person) {
@@ -107,12 +84,6 @@ export default function ContactDetailPage() {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/person/${person.id}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) throw new Error('Failed to delete contact');
-
-      // Update frontend state
       deletePerson(person.id);
 
       toast({

@@ -3,10 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { ProgressBar } from '@/components/ProgressBar';
 import { AddPaymentModal } from '@/components/AddPaymentModal';
-import { mockExpenses, mockPayments } from '@/api/mock';
+import { useApp } from '@/context/AppContext';
 import {
   personFullName,
-  expenseProgress,
   formatCurrencyCompact,
 } from '@/types';
 import { cn } from '@/lib/utils';
@@ -29,8 +28,11 @@ function formatDate(dateStr: string): string {
 export default function ExpenseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const { transactions, payments, persons, groups } = useApp();
 
-  const expense = mockExpenses.find((e) => e.id === id && !e.is_group_expense);
+  const expense = transactions.find(
+    (t) => t.id === id && (t.transactionType === 'STRAIGHT_EXPENSE' || t.transactionType === 'INSTALLMENT_EXPENSE')
+  );
 
   if (!expense) {
     return (
@@ -48,24 +50,24 @@ export default function ExpenseDetailPage() {
     );
   }
 
-  const expensePayments = mockPayments.filter((p) => p.expense_id === expense.id);
-  const progress = expenseProgress(expense);
+  const expensePayments = payments.filter((p) => p.transactionId === expense.id);
+  const amountBorrowed = Number(expense.amountBorrowed ?? 0);
+  const amountRemaining = Number(expense.amountRemaining ?? amountBorrowed);
+  const amountPaid = Math.max(0, amountBorrowed - amountRemaining);
+  const progress = amountBorrowed > 0 ? Math.min((amountPaid / amountBorrowed) * 100, 100) : 0;
   const isPaid = expense.status === 'PAID';
 
-  const renterName = expense.renter_person
-    ? personFullName(expense.renter_person)
-    : expense.renter_group?.group_name ?? '—';
-
-  const amountPaid =
-    expense.status === 'PAID' ? expense.amount
-    : expense.status === 'PENDING' ? 0
-    : expense.amount * (progress / 100);
+  const borrowerPerson = persons.find((p) => p.id === expense.borrowerContactId);
+  const borrowerGroup = groups.find((g) => g.id === expense.borrowerGroupId);
+  const renterName = borrowerPerson
+    ? personFullName(borrowerPerson)
+    : borrowerGroup?.name ?? '—';
 
   const infoItems: { label: string; value: string }[] = [
     { label: 'Payer',   value: renterName },
-    { label: 'Amount',  value: formatCurrencyCompact(expense.amount) },
+    { label: 'Amount',  value: formatCurrencyCompact(amountBorrowed) },
     { label: 'Status',  value: expense.status.replace('_', ' ') },
-    { label: 'Created', value: formatDate(expense.created_at) },
+    { label: 'Created', value: formatDate(expense.createdAt ?? new Date().toISOString()) },
   ];
 
   return (
@@ -93,7 +95,7 @@ export default function ExpenseDetailPage() {
 
           {/* Total amount */}
           <p className="text-2xl font-bold text-foreground">
-            {formatCurrencyCompact(expense.amount)}
+            {formatCurrencyCompact(amountBorrowed)}
           </p>
 
           {/* Progress bar */}
@@ -105,7 +107,7 @@ export default function ExpenseDetailPage() {
               {formatCurrencyCompact(amountPaid)} paid
             </span>
             <span className="text-muted-foreground">
-              of {formatCurrencyCompact(expense.amount)}
+              of {formatCurrencyCompact(amountBorrowed)}
             </span>
           </div>
 
@@ -162,7 +164,7 @@ export default function ExpenseDetailPage() {
               {expensePayments.map((pay) => {
                 const payerName = pay.payee_person
                   ? personFullName(pay.payee_person)
-                  : '—';
+                  : persons.find((p) => p.id === pay.payeeId)?.name ?? '—';
                 return (
                   <div key={pay.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 min-w-0">
@@ -170,7 +172,7 @@ export default function ExpenseDetailPage() {
                       <p className="text-xs text-muted-foreground">{formatDate(pay.payment_date)}</p>
                     </div>
                     <span className="text-sm font-medium text-primary shrink-0">
-                      {formatCurrencyCompact(pay.amount)}
+                      {formatCurrencyCompact(Number(pay.paymentAmount ?? 0))}
                     </span>
                   </div>
                 );

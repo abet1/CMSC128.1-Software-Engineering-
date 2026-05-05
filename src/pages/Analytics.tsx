@@ -1,20 +1,20 @@
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AppLayout } from '@/components/AppLayout';
-import { mockTransactions, mockPayments, mockPersons } from '@/api/mock';
+import { useApp } from '@/context/AppContext';
 import { formatCurrencyCompact, personFullName } from '@/types';
 
 // ── Data derivations ──────────────────────────────────────────────────────────
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function paymentsOverTime() {
+function paymentsOverTime(payments: any[]) {
   const today = new Date('2026-03-18');
   return Array.from({ length: 6 }, (_, i) => {
     const d   = new Date(today.getFullYear(), today.getMonth() - (5 - i), 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const total = mockPayments
-      .filter(p => (p.payment_date ?? '').startsWith(key))
-      .reduce((s, p) => s + (p.amount ?? 0), 0);
+    const total = payments
+      .filter(p => String(p.paymentDate ?? p.payment_date ?? '').startsWith(key))
+      .reduce((s, p) => s + (p.paymentAmount ?? p.amount ?? 0), 0);
     return { month: MONTHS[d.getMonth()], amount: total };
   });
 }
@@ -26,9 +26,9 @@ const STATUS_LABELS: Record<string, string> = {
   PAID: 'Paid', PARTIALLY_PAID: 'Partial', UNPAID: 'Unpaid', OVERDUE: 'Overdue',
 };
 
-function loanStatusData() {
+function loanStatusData(transactions: any[]) {
   const counts: Record<string, number> = { PAID: 0, PARTIALLY_PAID: 0, UNPAID: 0, OVERDUE: 0 };
-  mockTransactions.forEach(t => {
+  transactions.forEach(t => {
     const key = t.status ?? 'UNPAID';
     counts[key] = (counts[key] ?? 0) + 1;
   });
@@ -37,9 +37,9 @@ function loanStatusData() {
   }));
 }
 
-function topPeopleData() {
+function topPeopleData(transactions: any[], persons: any[]) {
   const totals: Record<string, number> = {};
-  mockTransactions
+  transactions
     .filter(t => t.transactionType === 'LEND')
     .forEach(t => {
       const pid = t.borrowerContactId ?? '';
@@ -47,7 +47,7 @@ function topPeopleData() {
     });
   return Object.entries(totals)
     .map(([pid, amount]) => {
-      const person = mockPersons.find(p => p.id === pid);
+      const person = persons.find(p => p.id === pid);
       const name = person ? personFullName(person) : pid;
       return { name: name.length > 14 ? name.slice(0, 13) + '…' : name, amount };
     })
@@ -55,9 +55,9 @@ function topPeopleData() {
     .slice(0, 5);
 }
 
-function receivablesVsPayables() {
+function receivablesVsPayables(transactions: any[]) {
   const out = { receivable: 0, payable: 0 };
-  mockTransactions.forEach(t => {
+  transactions.forEach(t => {
     if (t.transactionType === 'LEND' || t.transactionType === 'GROUP_EXPENSE') {
       out.receivable += t.amountRemaining ?? 0;
     } else if (t.transactionType === 'BORROW') {
@@ -87,17 +87,17 @@ function ChartCard({ title, sub, children }: { title: string; sub: string; child
 }
 
 export default function Analytics() {
-  const timeData    = paymentsOverTime();
-  const statusData  = loanStatusData();
-  const topPeople   = topPeopleData();
-  const rvpData     = receivablesVsPayables();
+  const { transactions, payments, persons } = useApp();
+  const timeData    = paymentsOverTime(payments);
+  const statusData  = loanStatusData(transactions);
+  const topPeople   = topPeopleData(transactions, persons);
+  const rvpData     = receivablesVsPayables(transactions);
 
-  const totalLent = mockTransactions
+  const totalLent = transactions
     .filter(t => t.transactionType === 'LEND')
     .reduce((s, t) => s + (t.amountBorrowed ?? 0), 0);
-  const totalCollected = mockPayments
-    .filter(p => p.transactionId)
-    .reduce((s, p) => s + (p.amount ?? 0), 0);
+  const totalCollected = payments
+    .reduce((s, p) => s + (p.paymentAmount ?? p.amount ?? 0), 0);
 
   return (
     <AppLayout>
@@ -114,8 +114,8 @@ export default function Analytics() {
           {[
             { label: 'Total Lent',      value: formatCurrencyCompact(totalLent),      color: 'text-primary' },
             { label: 'Total Collected', value: formatCurrencyCompact(totalCollected),  color: 'text-primary' },
-            { label: 'Active Loans',    value: String(mockTransactions.filter(t => t.status !== 'PAID').length), color: 'text-foreground' },
-            { label: 'Completed',       value: String(mockTransactions.filter(t => t.status === 'PAID').length),  color: 'text-muted-foreground' },
+            { label: 'Active Loans',    value: String(transactions.filter(t => t.status !== 'PAID').length), color: 'text-foreground' },
+            { label: 'Completed',       value: String(transactions.filter(t => t.status === 'PAID').length),  color: 'text-muted-foreground' },
           ].map(s => (
             <div key={s.label} className="bg-card border border-border rounded-xl p-3 sm:p-4">
               <p className="text-xs text-muted-foreground">{s.label}</p>

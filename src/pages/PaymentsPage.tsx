@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { TrendingUp, Search, X } from 'lucide-react';
 import { AppLayout } from '@/components/AppLayout';
-import { mockPayments, mockTransactions, mockExpenses } from '@/api/mock';
+import { useApp } from '@/context/AppContext';
 import { formatCurrencyCompact, personFullName } from '@/types';
 import type { Payment } from '@/types';
 import { cn } from '@/lib/utils';
@@ -12,14 +12,10 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 }
 
-function paymentLabel(p: Payment): string {
+function paymentLabel(p: Payment, transactions: any[]): string {
   if (p.transactionId) {
-    const t = mockTransactions.find(tx => tx.id === p.transactionId);
+    const t = transactions.find(tx => tx.id === p.transactionId);
     return t?.entryName ?? '—';
-  }
-  if (p.expense_id) {
-    const e = mockExpenses.find(ex => ex.id === p.expense_id);
-    return e?.description ?? '—';
   }
   return '—';
 }
@@ -57,37 +53,43 @@ function groupByMonth(payments: Payment[]): MonthGroup[] {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const allSorted = [...mockPayments].sort((a, b) => {
-  const da = new Date(a.payment_date ?? String(a.paymentDate ?? '')).getTime();
-  const db = new Date(b.payment_date ?? String(b.paymentDate ?? '')).getTime();
-  return db - da;
-});
-
-const grandTotal = allSorted.reduce((s, p) => s + (p.amount ?? p.paymentAmount ?? 0), 0);
-
 export default function PaymentsPage() {
+  const { payments, transactions } = useApp();
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [query, setQuery]   = useState('');
 
+  const allSorted = useMemo(() => {
+    return [...payments].sort((a, b) => {
+      const da = new Date(a.payment_date ?? String(a.paymentDate ?? '')).getTime();
+      const db = new Date(b.payment_date ?? String(b.paymentDate ?? '')).getTime();
+      return db - da;
+    });
+  }, [payments]);
+
+  const grandTotal = useMemo(
+    () => allSorted.reduce((s, p) => s + (p.amount ?? p.paymentAmount ?? 0), 0),
+    [allSorted]
+  );
+
   const filtered = useMemo(() => {
     let list = allSorted;
-    if (filter === 'LOAN')    list = list.filter(p => p.transactionId && !p.expense_id);
-    if (filter === 'EXPENSE') list = list.filter(p => p.expense_id);
+    if (filter === 'LOAN')    list = list.filter(p => p.transactionId);
+    if (filter === 'EXPENSE') list = [];
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(p =>
-        paymentLabel(p).toLowerCase().includes(q) ||
+        paymentLabel(p, transactions).toLowerCase().includes(q) ||
         (p.payee_person ? personFullName(p.payee_person).toLowerCase().includes(q) : false)
       );
     }
     return list;
-  }, [filter, query]);
+  }, [allSorted, filter, query, transactions]);
 
   const groups = useMemo(() => groupByMonth(filtered), [filtered]);
   const totalFiltered = filtered.reduce((s, p) => s + (p.amount ?? p.paymentAmount ?? 0), 0);
 
-  const loanTotal    = allSorted.filter(p => p.transactionId && !p.expense_id).reduce((s, p) => s + (p.amount ?? p.paymentAmount ?? 0), 0);
-  const expenseTotal = allSorted.filter(p => p.expense_id).reduce((s, p) => s + (p.amount ?? p.paymentAmount ?? 0), 0);
+  const loanTotal    = allSorted.filter(p => p.transactionId).reduce((s, p) => s + (p.amount ?? p.paymentAmount ?? 0), 0);
+  const expenseTotal = 0;
 
   return (
     <AppLayout>
@@ -219,7 +221,7 @@ export default function PaymentsPage() {
                     return (
                       <tr key={p.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-foreground truncate">{paymentLabel(p)}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{paymentLabel(p, transactions)}</p>
                         </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{name}</td>
                         <td className="px-4 py-3">
@@ -249,7 +251,7 @@ export default function PaymentsPage() {
                     <TrendingUp className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{paymentLabel(p)}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{paymentLabel(p, transactions)}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {paymentSub(p)} · {formatDate(p.payment_date ?? String(p.paymentDate ?? ''))}
                     </p>

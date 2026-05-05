@@ -16,7 +16,6 @@ const getInstallmentStatusConfig = (status: InstallmentStatus | string) => {
       return { icon: Check,         color: 'text-success',          bg: 'bg-success/10',     border: 'border-success/20',     label: 'Paid'    };
     case 'SKIPPED':
       return { icon: SkipForward,   color: 'text-warning',          bg: 'bg-warning/10',     border: 'border-warning/20',     label: 'Skipped' };
-    case 'DELINQUENT':
     case 'OVERDUE':
       return { icon: AlertTriangle, color: 'text-destructive',      bg: 'bg-destructive/10', border: 'border-destructive/20', label: 'Overdue' };
     default:
@@ -74,7 +73,7 @@ const TransactionDetail = () => {
   const handleSkipTerm = () => {
     if (transactionWithDetails.installmentPlan) {
       const unpaid = transactionWithDetails.installmentPlan.installments.find(
-        i => i.status === 'UNPAID' || i.status === 'DELINQUENT'
+        i => i.status === 'UNPAID' || i.status === 'OVERDUE'
       );
       if (unpaid) skipInstallment(transaction.id, unpaid.id);
     }
@@ -294,7 +293,7 @@ const TransactionDetail = () => {
                   >
                     Record Payment
                   </button>
-                  {transaction.hasInstallments && transactionWithDetails.installmentPlan && (
+                  {transactionWithDetails.installmentPlan && (
                     <button
                       onClick={handleSkipTerm}
                       className="py-3.5 px-5 rounded-xl bg-card border border-border text-foreground font-semibold hover:bg-muted transition-all active:scale-[0.98]"
@@ -311,7 +310,7 @@ const TransactionDetail = () => {
                   <div className="flex items-center justify-between">
                     <h3 className="font-display font-semibold text-foreground">Installment Schedule</h3>
                     <span className="text-xs text-muted-foreground px-3 py-1 rounded-full bg-muted">
-                      {transactionWithDetails.installmentPlan.frequency} · {transactionWithDetails.installmentPlan.terms} terms
+                      {transactionWithDetails.installmentPlan.installments.length} terms
                     </span>
                   </div>
                   <div className="space-y-2">

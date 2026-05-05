@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { TransactionType, PaymentStatus, SplitType } from '@/types';
 import { ArrowLeft, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
 
 export function toLocalDateTime(date: string): string {
   const [year, month, day] = date.split('-');
@@ -20,6 +22,7 @@ export function toLocalDateTime(date: string): string {
 export default function ExpensePage() {
   const navigate = useNavigate();
   const { persons, groups, addTransaction, divideEqually, divideByPercentage, divideByAmount } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [entryName, setEntryName] = useState('');
@@ -31,13 +34,18 @@ export default function ExpensePage() {
   const [splitType, setSplitType] = useState<SplitType>('EQUAL');
   const [memberSplits, setMemberSplits] = useState<Record<string, string>>({});
 
-  const LENDER_ID = '49e46789-d54e-4cb1-af9b-8af4e452a001';
+  const LENDER_ID = user?.id ?? '';
 
   const contacts = persons.filter(p => p.id !== LENDER_ID);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+
+  if (!LENDER_ID) {
+    toast({ title: 'Not authenticated', description: 'Please sign in again.', variant: 'destructive' });
+    return;
+  }
 
   if (!entryName || !groupId || !amountBorrowed) {
     toast({
@@ -74,18 +82,50 @@ export default function ExpensePage() {
 
 
   try {
-    const res = await fetch('http://localhost:8080/api/loanentries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const resolveCurrentUserPersonId = async (): Promise<string> => {
+      const { data: existingByEmail, error: existingError } = await supabase
+        .from('persons')
+        .select('id')
+        .eq('owner_user_id', LENDER_ID)
+        .eq('email', user?.email ?? '')
+        .limit(1)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (existingByEmail?.id) return existingByEmail.id;
+
+      const { data: existingAny, error: existingAnyError } = await supabase
+        .from('persons')
+        .select('id')
+        .eq('owner_user_id', LENDER_ID)
+        .ilike('notes', '__self__')
+        .limit(1)
+        .maybeSingle();
+
+      if (existingAnyError) throw existingAnyError;
+      if (existingAny?.id) return existingAny.id;
+
+      const { data: createdSelf, error: createError } = await supabase
+        .from('persons')
+        .insert({
+          owner_user_id: LENDER_ID,
+          name: user?.name ?? 'Me',
+          email: user?.email ?? null,
+          notes: '__self__',
+        })
+        .select('id')
+        .single();
+
+      if (createError) throw createError;
+      return createdSelf.id;
+    };
+
+    const lenderPersonId = await resolveCurrentUserPersonId();
+    const createdTransaction = await addTransaction({
+      ...payload,
+      lenderContactId: lenderPersonId,
+      dateBorrowed: dateBorrowed,
     });
-
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.message || 'Failed to create expense');
-    }
-
-    const createdTransaction = await res.json();
 
     toast({
       title: 'Success',

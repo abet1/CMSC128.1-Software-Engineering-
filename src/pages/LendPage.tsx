@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 import { TransactionType, PaymentFrequency, InstallmentStatus, TransactionDirection } from '@/types';
 import { calculateNextPaymentDate } from '@/types';
 import { ArrowLeft, Send } from 'lucide-react';
@@ -23,6 +25,7 @@ export function toLocalDateTime(date: string): string {
 export default function LendPage() {
   const navigate = useNavigate();
   const { persons, addTransaction, addInstallmentPlan } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [entryName, setEntryName] = useState('');
@@ -36,7 +39,7 @@ export default function LendPage() {
   const [terms, setTerms] = useState('');
   const [notes, setNotes] = useState('');
 
-  const LENDER_ID = '49e46789-d54e-4cb1-af9b-8af4e452a001';
+  const LENDER_ID = user?.id ?? '';
 
   const contacts = persons.filter(p => p.id !== LENDER_ID);
   const [searchParams] = useSearchParams();
@@ -56,6 +59,11 @@ export default function LendPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+
+  if (!LENDER_ID) {
+    toast({ title: 'Not authenticated', description: 'Please sign in again.', variant: 'destructive' });
+    return;
+  }
 
   if (!entryName || !borrowerId || !amountBorrowed) {
     toast({
@@ -82,61 +90,78 @@ export default function LendPage() {
   }
 
   try {
-    const loanEntryPayload: any = {
+    const resolveCurrentUserPersonId = async (): Promise<string> => {
+      const { data: existingByEmail, error: existingError } = await supabase
+        .from('persons')
+        .select('id')
+        .eq('owner_user_id', LENDER_ID)
+        .eq('email', user?.email ?? '')
+        .limit(1)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (existingByEmail?.id) return existingByEmail.id;
+
+      const { data: existingAny, error: existingAnyError } = await supabase
+        .from('persons')
+        .select('id')
+        .eq('owner_user_id', LENDER_ID)
+        .ilike('notes', '__self__')
+        .limit(1)
+        .maybeSingle();
+
+      if (existingAnyError) throw existingAnyError;
+      if (existingAny?.id) return existingAny.id;
+
+      const { data: createdSelf, error: createError } = await supabase
+        .from('persons')
+        .insert({
+          owner_user_id: LENDER_ID,
+          name: user?.name ?? 'Me',
+          email: user?.email ?? null,
+          notes: '__self__',
+        })
+        .select('id')
+        .single();
+
+      if (createError) throw createError;
+      return createdSelf.id;
+    };
+
+    const lenderPersonId = await resolveCurrentUserPersonId();
+
+    const createdLoanEntry = await addTransaction({
       entryName,
-      description: description || null,
+      description: description || undefined,
       transactionType: hasInstallments ? 'INSTALLMENT_EXPENSE' : 'STRAIGHT_EXPENSE',
       direction: 'LEND',
       amountBorrowed: amount,
       amountRemaining: amount,
-      dateBorrowed: new Date(dateBorrowed).toISOString(),
-      hasInstallments: undefined,
-      lender: { id: LENDER_ID },
-      borrower: { id: borrowerId },
-      notes: notes || null,
-    };
-
-    const loanRes = await fetch('http://localhost:8080/api/loanentries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loanEntryPayload),
-    });
-
-    if (!loanRes.ok) {
-      const err = await loanRes.text();
-      throw new Error(err);
-    }
-
-    const createdLoanEntry = await loanRes.json();
-
-    addTransaction({
-      ...createdLoanEntry,
+      dateBorrowed: dateBorrowed,
+      lenderContactId: lenderPersonId,
       borrowerContactId: borrowerId,
-      lenderContactId: LENDER_ID,
-      borrowerGroupId: null, // or group ID if needed
+      borrowerGroupId: null,
+      notes: notes || undefined,
     });
 
     if (hasInstallments) {
-      const installmentPayload = {
-        startDate: new Date(startDate).toISOString(),
-        paymentFrequency,
-        paymentTerms: parseInt(terms, 10),
-        notes: notes || null,
-      };
-
-      const instRes = await fetch(
-        `http://localhost:8080/api/installments/${createdLoanEntry.id}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(installmentPayload),
+      const paymentTerms = parseInt(terms, 10);
+      const amountPerTerm = amount / paymentTerms;
+      const installments = Array.from({ length: paymentTerms }, (_, i) => {
+        let dueDate = startDate;
+        for (let termIdx = 0; termIdx < i; termIdx++) {
+          dueDate = calculateNextPaymentDate(dueDate, paymentFrequency);
         }
-      );
-
-      if (!instRes.ok) {
-        const err = await instRes.text();
-        throw new Error('Installment creation failed: ' + err);
-      }
+        return {
+          id: `${createdLoanEntry.id}-term-${i + 1}`,
+          termNumber: i + 1,
+          dueDate,
+          amountDue: amountPerTerm,
+          amountPaid: 0,
+          status: 'UNPAID' as InstallmentStatus,
+        };
+      });
+      addInstallmentPlan({ transactionId: createdLoanEntry.id, installments });
     }
 
     toast({ title: 'Loan entry created successfully' });

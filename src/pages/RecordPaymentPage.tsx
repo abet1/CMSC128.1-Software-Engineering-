@@ -12,13 +12,13 @@ import { ArrowLeft, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function RecordPaymentPage() {
-  const { transactionId } = useParams<{ transactionId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { transactions, persons, groups, installmentPlans, addPayment } = useApp();
   const { toast } = useToast();
   
-  const transaction = transactions.find(t => t.id === transactionId);
-  const installmentPlan = installmentPlans.find(ip => ip.transactionId === transactionId);
+  const transaction = transactions.find(t => String(t.id) === String(id));
+  const installmentPlan = installmentPlans.find(ip => String(ip.transactionId) === String(id));
   
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -51,7 +51,7 @@ export default function RecordPaymentPage() {
   }
 
   const availableInstallments = installmentPlan?.installments.filter(
-    inst => inst.status === 'UNPAID' || inst.status === 'DELINQUENT'
+    inst => inst.status === 'UNPAID' || inst.status === 'OVERDUE'
   ) || [];
 
   const maxAmount = transaction.amountRemaining;
@@ -105,6 +105,7 @@ export default function RecordPaymentPage() {
       installmentId: (installmentId && installmentId !== "none") ? installmentId : undefined,
       paymentDate: new Date(paymentDate),
       paymentAmount: amount,
+      payeeId: payeeId || undefined,
       notes: notes || undefined,
     });
 
