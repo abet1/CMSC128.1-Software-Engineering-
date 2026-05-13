@@ -4,9 +4,11 @@ import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Plus, User, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
+import { isSelfPerson } from '@/lib/people';
 
 export default function ContactSelectPage() {
   const navigate = useNavigate();
@@ -15,13 +17,12 @@ export default function ContactSelectPage() {
   const field = searchParams.get('field') || 'contact';
   
   const { persons } = useApp();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const LENDER_ID = '49e46789-d54e-4cb1-af9b-8af4e452a001';
-
-const contacts = persons.filter(p => p.id !== LENDER_ID);
+const contacts = persons.filter(p => !isSelfPerson(p, user));
 
   
   const filteredContacts = contacts.filter(p =>

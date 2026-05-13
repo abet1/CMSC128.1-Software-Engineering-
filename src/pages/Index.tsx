@@ -4,15 +4,16 @@ import { TransactionItem } from '@/components/TransactionItem';
 import { ActivityItem } from '@/components/ActivityItem';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, TrendingUp, TrendingDown, Users, Clock, CheckCircle2, Calendar, ArrowRightCircle } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Users, Clock, CheckCircle2, Calendar, ArrowRightCircle, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLendTransaction, isBorrowTransaction, formatCurrencyCompact } from '@/types';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 
 const Index = () => {
   const navigate = useNavigate();
   const { transactions, payments, installmentPlans } = useApp();
+  const [showBalance, setShowBalance] = useState(true);
   
   const summary = useMemo(() => {
     let totalLent = 0;
@@ -186,7 +187,63 @@ const Index = () => {
       <div className="px-4 lg:px-8 py-4 lg:py-6">
         <div className="max-w-7xl mx-auto space-y-5 lg:space-y-8">
       {/* Balance Cards */}
-          <div className="animate-fade-in -mt-2 lg:mt-0 grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-5">
+          <div
+            onClick={() => navigate('/analytics')}
+            className="animate-fade-in -mt-2 rounded-3xl border border-border bg-card p-5 shadow-card active:scale-[0.99] lg:hidden"
+          >
+            <div className="flex items-start justify-between gap-5">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Net Balance</p>
+                <h2 className={cn(
+                  "mt-3 font-display text-[40px] font-bold leading-none tracking-normal",
+                  summary.netBalance >= 0 ? "text-foreground" : "text-destructive"
+                )}>
+                  {showBalance
+                    ? `${summary.netBalance >= 0 ? '+' : ''}${formatCurrencyCompact(summary.netBalance)}`
+                    : '••••••'}
+                </h2>
+                <p className="mt-4 text-sm leading-5 text-muted-foreground">
+                  {summary.netBalance >= 0 ? 'You are ahead overall' : 'You owe more than you are owed'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowBalance(prev => !prev);
+                }}
+                aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+                className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-muted text-muted-foreground transition-colors hover:text-foreground active:scale-95"
+              >
+                {showBalance ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+              </button>
+            </div>
+
+            <div className="mt-7 grid grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-success/20 bg-success/5 p-4">
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-success">Receivables</p>
+                  <TrendingUp className="h-4 w-4 shrink-0 text-success" />
+                </div>
+                <p className="truncate text-lg font-semibold text-success">
+                  {showBalance ? formatCurrencyCompact(summary.pendingReceivables) : '••••'}
+                </p>
+                <p className="mt-2 text-[11px] leading-4 text-muted-foreground">Money owed to you</p>
+              </div>
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-destructive">Payables</p>
+                  <TrendingDown className="h-4 w-4 shrink-0 text-destructive" />
+                </div>
+                <p className="truncate text-lg font-semibold text-destructive">
+                  {showBalance ? formatCurrencyCompact(summary.pendingPayables) : '••••'}
+                </p>
+                <p className="mt-2 text-[11px] leading-4 text-muted-foreground">Money you owe</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="animate-fade-in hidden lg:mt-0 lg:grid lg:grid-cols-3 lg:gap-5">
             {/* Net Balance */}
             <div 
               onClick={() => navigate('/analytics')}

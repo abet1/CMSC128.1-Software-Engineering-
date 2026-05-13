@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   signInAsGuest: (name: string, email?: string) => Promise<void>;
+  updateProfileName: (name: string) => Promise<AuthUser>;
   signOut: () => void;
 }
 
@@ -101,6 +102,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(toAuthUser(anonUser.id, email?.trim() || undefined, displayName));
   };
 
+  const updateProfileName = async (name: string): Promise<AuthUser> => {
+    const displayName = name.trim();
+    if (!displayName) throw new Error('Display name is required');
+    if (!isSupabaseConfigured) throw new Error('Supabase is not configured');
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: {
+        full_name: displayName,
+        name: displayName,
+      },
+    });
+    if (error) throw error;
+
+    const updatedUser = data.user;
+    const nextUser = (() => {
+      const current = user;
+      if (!current && !updatedUser) return null;
+      return toAuthUser(
+        updatedUser?.id ?? current?.id ?? '',
+        updatedUser?.email ?? current?.email,
+        displayName
+      );
+    })();
+
+    if (!nextUser) throw new Error('Could not read updated user');
+    setUser(nextUser);
+    return nextUser;
+  };
+
   const signOut = () => {
     if (!isSupabaseConfigured) {
       setUser(null);
@@ -115,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isLoading,
       signInAsGuest,
+      updateProfileName,
       signOut,
     }),
     [user, isLoading]

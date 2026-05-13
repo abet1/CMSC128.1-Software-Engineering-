@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Person } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { isSelfPerson } from '@/lib/people';
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +31,7 @@ const People = () => {
   const [isImporting, setIsImporting] = useState(false);
   const contactsSupported = isContactsApiSupported();
 
-  const contacts = persons.filter(p => p.id !== user?.id);
+  const contacts = persons.filter(p => !isSelfPerson(p, user));
 
   const filteredPersons = contacts.filter(p =>
     (p.name ?? '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||

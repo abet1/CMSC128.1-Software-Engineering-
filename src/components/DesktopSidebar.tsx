@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { navItems, isNavActive } from '@/lib/navItems';
+import { desktopNavItems, isNavActive } from '@/lib/navItems';
 import { PlusCircle, TrendingUp, TrendingDown, Receipt, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -49,7 +49,7 @@ export function DesktopSidebar() {
         <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-[0.12em] px-3 mb-2 mt-1">
           Navigate
         </p>
-        {navItems.map((item) => {
+        {desktopNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = isNavActive(item.path, pathname);
           return (

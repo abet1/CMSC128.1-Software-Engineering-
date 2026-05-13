@@ -1,4 +1,4 @@
-import { Home, FileText, Users, CreditCard, BarChart3 } from 'lucide-react';
+import { Home, FileText, Users, CreditCard, BarChart3, Settings } from 'lucide-react';
 
 export const navItems = [
   { path: '/',          label: 'Home',     icon: Home },
@@ -6,6 +6,11 @@ export const navItems = [
   { path: '/people',    label: 'People',   icon: Users },
   { path: '/payments',  label: 'Payments', icon: CreditCard },
   { path: '/analytics', label: 'Analytics',icon: BarChart3 },
+] as const;
+
+export const desktopNavItems = [
+  ...navItems,
+  { path: '/settings',  label: 'Settings', icon: Settings },
 ] as const;
 
 export function isNavActive(itemPath: string, pathname: string): boolean {

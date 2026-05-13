@@ -29,6 +29,7 @@ import GroupSelectPage       from './pages/GroupSelectPage';
 import RecordPaymentPage     from './pages/RecordPaymentPage';
 import Analytics             from './pages/Analytics';
 import PaymentsPage          from './pages/PaymentsPage';
+import Settings              from './pages/Settings';
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ function AppRoutes() {
         <Route path="/payments"               element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
         <Route path="/record-payment/:id"     element={<ProtectedRoute><RecordPaymentPage /></ProtectedRoute>} />
         <Route path="/analytics"              element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+        <Route path="/settings"               element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
