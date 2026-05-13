@@ -1,5 +1,5 @@
 import { Send, Download, Users, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
-import { Transaction, formatCurrencyCompact, isLendTransaction } from '@/types';
+import { Transaction, formatCurrencyCompact } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useApp } from '@/context/AppContext';
@@ -14,32 +14,45 @@ interface TransactionItemProps {
 export function TransactionItem({ transaction, onClick, variant = 'default' }: TransactionItemProps) {
   const { user } = useAuth();
   const { persons, groups } = useApp();
-  const isLend = isLendTransaction(transaction);
   const isGroupExpense = transaction.transactionType === 'GROUP_EXPENSE';
+
+  const isSelfContactId = (contactId?: string | null) => {
+    if (!contactId) return false;
+    if (contactId === user?.id) return true;
+
+    const person = persons.find(p => p.id === contactId);
+    return person?.notes === '__self__' ||
+      (!!user?.email && person?.email === user.email) ||
+      (!!user?.name && person?.name === user.name);
+  };
+
+  const getPersonName = (contactId?: string | null) => {
+    if (!contactId || isSelfContactId(contactId)) return '';
+    return persons.find(p => p.id === contactId)?.name || '';
+  };
+
+  const isReceivable = isGroupExpense ||
+    isSelfContactId(transaction.lenderContactId) ||
+    (
+      !isSelfContactId(transaction.borrowerContactId) &&
+      (transaction.direction === 'LEND' ||
+        transaction.transactionType === 'LEND')
+    );
   
   const getContactName = () => {
     if (isGroupExpense && transaction.borrowerGroupId) {
       const group = groups.find(g => g.id === transaction.borrowerGroupId);
       return group?.name || 'Group';
     }
-    if (isLend && transaction.borrowerContactId) {
-      if (transaction.borrowerContactId === user?.id) return user?.name ?? 'You';
-      const person = persons.find(p => p.id === transaction.borrowerContactId);
-      return person?.name || 'Unknown';
-    }
-    if (!isLend && transaction.lenderContactId) {
-      if (transaction.lenderContactId === user?.id) return user?.name ?? 'You';
-      const person = persons.find(p => p.id === transaction.lenderContactId);
-      return person?.name || 'Unknown';
-    }
-    return null;
+    if (isReceivable) return getPersonName(transaction.borrowerContactId) || getPersonName(transaction.lenderContactId) || 'Unknown';
+    return getPersonName(transaction.lenderContactId) || getPersonName(transaction.borrowerContactId) || 'Unknown';
   };
   
   const contactName = getContactName();
   
   const getIcon = () => {
     if (isGroupExpense) return Users;
-    return isLend ? TrendingUp : TrendingDown;
+    return isReceivable ? TrendingUp : TrendingDown;
   };
   
   const Icon = getIcon();
@@ -63,16 +76,16 @@ export function TransactionItem({ transaction, onClick, variant = 'default' }: T
       >
         <div className={cn(
           "flex items-center justify-center w-10 h-10 rounded-lg",
-          isLend ? "bg-success/10" : isGroupExpense ? "bg-primary/10" : "bg-destructive/10"
+          isReceivable ? "bg-success/10" : isGroupExpense ? "bg-primary/10" : "bg-destructive/10"
         )}>
           <Icon className={cn(
             "w-4 h-4",
-            isLend ? "text-success" : isGroupExpense ? "text-primary" : "text-destructive"
+            isReceivable ? "text-success" : isGroupExpense ? "text-primary" : "text-destructive"
           )} />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">{transaction.entryName}</p>
+          <p className="font-medium text-sm leading-6 text-foreground truncate pb-0.5">{transaction.entryName}</p>
           {contactName && (
             <p className="text-[10px] text-muted-foreground/70 truncate">{contactName}</p>
           )}
@@ -81,9 +94,9 @@ export function TransactionItem({ transaction, onClick, variant = 'default' }: T
 
         <span className={cn(
           "text-sm font-bold",
-          isLend ? "text-success" : "text-destructive"
+          isReceivable ? "text-success" : "text-destructive"
         )}>
-          {isLend ? '+' : '-'}{formatCurrencyCompact(transaction.amountRemaining)}
+          {isReceivable ? '+' : '-'}{formatCurrencyCompact(transaction.amountRemaining)}
         </span>
       </button>
     );
@@ -97,11 +110,11 @@ export function TransactionItem({ transaction, onClick, variant = 'default' }: T
       {/* Icon */}
       <div className={cn(
         "flex items-center justify-center w-12 h-12 rounded-lg",
-        isLend ? "bg-success/10" : isGroupExpense ? "bg-primary/10" : "bg-destructive/10"
+        isReceivable ? "bg-success/10" : isGroupExpense ? "bg-primary/10" : "bg-destructive/10"
       )}>
         <Icon className={cn(
           "w-5 h-5",
-          isLend ? "text-success" : isGroupExpense ? "text-primary" : "text-destructive"
+          isReceivable ? "text-success" : isGroupExpense ? "text-primary" : "text-destructive"
         )} />
       </div>
 
@@ -109,7 +122,7 @@ export function TransactionItem({ transaction, onClick, variant = 'default' }: T
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground truncate pr-2">
+            <h3 className="font-sans font-medium text-[15px] leading-6 text-foreground truncate pr-2 pb-0.5">
               {transaction.entryName}
             </h3>
             {contactName && (
@@ -118,9 +131,9 @@ export function TransactionItem({ transaction, onClick, variant = 'default' }: T
           </div>
           <span className={cn(
             "text-sm font-bold tabular-nums flex-shrink-0 ml-2",
-            isLend ? "text-success" : "text-destructive"
+            isReceivable ? "text-success" : "text-destructive"
           )}>
-            {isLend ? '+' : '-'}{formatCurrencyCompact(transaction.amountRemaining)}
+            {isReceivable ? '+' : '-'}{formatCurrencyCompact(transaction.amountRemaining)}
           </span>
         </div>
         

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { TransactionItem } from '@/components/TransactionItem';
 import { useApp } from '@/context/AppContext';
-import { formatCurrencyCompact, isLendTransaction, isBorrowTransaction } from '@/types';
+import { formatCurrencyCompact } from '@/types';
 import { Search, TrendingUp, TrendingDown, Users, LayoutGrid, List, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -31,26 +31,57 @@ const Records = () => {
   const [showFilters, setShowFilters] = useState(false);
   const navigate = useNavigate();
 
+  const isSelfContactId = (contactId?: string | null) => {
+    if (!contactId) return false;
+    if (contactId === user?.id) return true;
+
+    const person = persons.find(p => p.id === contactId);
+    return person?.notes === '__self__' ||
+      (!!user?.email && person?.email === user.email) ||
+      (!!user?.name && person?.name === user.name);
+  };
+
+  const getPersonName = (contactId?: string | null) => {
+    if (!contactId || isSelfContactId(contactId)) return '';
+    return persons.find(p => p.id === contactId)?.name || '';
+  };
+
+  const isReceivableRecord = (transaction: typeof transactions[0]) => {
+    if (transaction.transactionType === 'GROUP_EXPENSE') return true;
+    if (isSelfContactId(transaction.lenderContactId)) return true;
+    if (isSelfContactId(transaction.borrowerContactId)) return false;
+    if (transaction.direction === 'LEND') return true;
+    if (transaction.direction === 'BORROW') return false;
+    return transaction.transactionType === 'LEND';
+  };
+
+  const isPayableRecord = (transaction: typeof transactions[0]) => {
+    if (transaction.transactionType === 'GROUP_EXPENSE') return false;
+    if (isSelfContactId(transaction.borrowerContactId)) return true;
+    if (isSelfContactId(transaction.lenderContactId)) return false;
+    if (transaction.direction === 'BORROW') return true;
+    if (transaction.direction === 'LEND') return false;
+    return transaction.transactionType === 'BORROW';
+  };
+
   const getContactName = (transaction: typeof transactions[0]) => {
     if (transaction.transactionType === 'GROUP_EXPENSE' && transaction.borrowerGroupId) {
       return groups.find(g => g.id === transaction.borrowerGroupId)?.name || '';
     }
-    if (isLendTransaction(transaction) && transaction.borrowerContactId) {
-      if (transaction.borrowerContactId === user?.id) return user?.name ?? '';
-      return persons.find(p => p.id === transaction.borrowerContactId)?.name || '';
+    if (isReceivableRecord(transaction)) {
+      return getPersonName(transaction.borrowerContactId) || getPersonName(transaction.lenderContactId);
     }
-    if (isBorrowTransaction(transaction) && transaction.lenderContactId) {
-      if (transaction.lenderContactId === user?.id) return user?.name ?? '';
-      return persons.find(p => p.id === transaction.lenderContactId)?.name || '';
+    if (isPayableRecord(transaction)) {
+      return getPersonName(transaction.lenderContactId) || getPersonName(transaction.borrowerContactId);
     }
-    return '';
+    return getPersonName(transaction.borrowerContactId) || getPersonName(transaction.lenderContactId);
   };
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const matchesFilter = filter === 'all' ||
-        (filter === 'lent'     && (isLendTransaction(t) || t.transactionType === 'GROUP_EXPENSE')) ||
-        (filter === 'borrowed' && isBorrowTransaction(t)) ||
+        (filter === 'lent'     && isReceivableRecord(t)) ||
+        (filter === 'borrowed' && isPayableRecord(t)) ||
         (filter === 'group'    && t.transactionType === 'GROUP_EXPENSE');
       const matchesStatus = status === 'all' ||
         (status === 'unpaid'  && t.status === 'UNPAID') ||
@@ -67,8 +98,8 @@ const Records = () => {
   }, [filter, status, debouncedSearch, transactions, persons, groups]);
 
   const summary = useMemo(() => {
-    const lent = filteredTransactions.filter(t => isLendTransaction(t) || t.transactionType === 'GROUP_EXPENSE');
-    const borrowed = filteredTransactions.filter(t => isBorrowTransaction(t));
+    const lent = filteredTransactions.filter(t => isReceivableRecord(t));
+    const borrowed = filteredTransactions.filter(t => isPayableRecord(t));
     return {
       totalLent:     lent.reduce((s, t) => s + t.amountRemaining, 0),
       totalBorrowed: borrowed.reduce((s, t) => s + t.amountRemaining, 0),
@@ -259,7 +290,7 @@ const Records = () => {
                   </thead>
                   <tbody className="divide-y divide-border/50 bg-card">
                     {filteredTransactions.map(t => {
-                      const isLendT  = isLendTransaction(t);
+                      const isLendT  = isReceivableRecord(t);
                       const isGroupT = t.transactionType === 'GROUP_EXPENSE';
                       const TIcon    = isGroupT ? Users : isLendT ? TrendingUp : TrendingDown;
                       const cName    = getContactName(t);
@@ -278,8 +309,8 @@ const Records = () => {
                                   isLendT ? 'text-success' : isGroupT ? 'text-primary' : 'text-destructive')} />
                               </div>
                               <div className="min-w-0">
-                                <p className="font-medium text-sm text-foreground truncate leading-tight">{t.entryName}</p>
-                                <p className="text-[11px] text-muted-foreground/70 font-mono leading-tight mt-0.5">{t.referenceId}</p>
+                                <p className="font-medium text-sm leading-6 text-foreground truncate pb-0.5">{t.entryName}</p>
+                                <p className="text-[11px] leading-4 text-muted-foreground/70 font-mono mt-0.5">{t.referenceId}</p>
                               </div>
                             </div>
                           </td>
@@ -317,14 +348,47 @@ const Records = () => {
 
               {/* ── Mobile: Cards ── */}
               <div className={cn('lg:hidden', view === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-2.5')}>
-                {filteredTransactions.map(t => (
-                  <TransactionItem
-                    key={t.id}
-                    transaction={t}
-                    onClick={() => navigate(`/transaction/${t.id}`)}
-                    variant={view === 'grid' ? 'compact' : 'default'}
-                  />
-                ))}
+                {filteredTransactions.map(t => {
+                  const isLendT = isReceivableRecord(t);
+                  const isGroupT = t.transactionType === 'GROUP_EXPENSE';
+                  const badge = statusBadgeMap[t.status] ?? { bg: 'bg-muted', text: 'text-muted-foreground', label: t.status };
+                  const contactName = getContactName(t);
+
+                  if (view === 'grid') {
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => navigate(`/transaction/${t.id}`)}
+                        className="min-w-0 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted/50 active:scale-[0.99]"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-2">
+                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', badge.bg, badge.text)}>
+                            {badge.label}
+                          </span>
+                          <span className={cn('shrink-0 text-sm font-bold tabular-nums', isLendT || isGroupT ? 'text-success' : 'text-destructive')}>
+                            {isLendT || isGroupT ? '+' : '-'}{formatCurrencyCompact(t.amountRemaining)}
+                          </span>
+                        </div>
+                        <p className="line-clamp-2 text-sm font-semibold leading-6 text-foreground pb-0.5">{t.entryName}</p>
+                        {contactName && (
+                          <p className="mt-1 truncate text-xs leading-5 text-muted-foreground">{contactName}</p>
+                        )}
+                        <div className="mt-3 flex items-center justify-between gap-2 text-[11px] leading-4 text-muted-foreground">
+                          <span>{format(t.dateBorrowed, 'MMM d')}</span>
+                          <span>{formatCurrencyCompact(t.amountBorrowed)} total</span>
+                        </div>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <TransactionItem
+                      key={t.id}
+                      transaction={t}
+                      onClick={() => navigate(`/transaction/${t.id}`)}
+                    />
+                  );
+                })}
                 {filteredTransactions.length === 0 && (
                   <div className="text-center py-16">
                     <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
