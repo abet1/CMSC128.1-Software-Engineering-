@@ -21,6 +21,8 @@ export function toLocalDateTime(date: string): string {
   return `${year}-${month}-${day}T00:00:00`;
 }
 
+const BORROW_DRAFT_KEY = 'borrow_form_draft';
+
 export default function BorrowPage() {
   const navigate = useNavigate();
   const { persons, addTransaction, addInstallmentPlan } = useApp();
@@ -44,6 +46,30 @@ export default function BorrowPage() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    const savedDraft = sessionStorage.getItem(BORROW_DRAFT_KEY);
+    if (!savedDraft) return;
+
+    try {
+      const draft = JSON.parse(savedDraft);
+      setEntryName(draft.entryName ?? '');
+      setDescription(draft.description ?? '');
+      setLenderId(draft.lenderId ?? '');
+      setAmountBorrowed(draft.amountBorrowed ?? '');
+      setDateBorrowed(draft.dateBorrowed ?? format(new Date(), 'yyyy-MM-dd'));
+      setHasInstallments(Boolean(draft.hasInstallments));
+      setStartDate(draft.startDate ?? '');
+      setPaymentFrequency(draft.paymentFrequency ?? 'MONTHLY');
+      setTerms(draft.terms ?? '');
+      setNotes(draft.notes ?? '');
+    } catch {
+      sessionStorage.removeItem(BORROW_DRAFT_KEY);
+      return;
+    }
+
+    sessionStorage.removeItem(BORROW_DRAFT_KEY);
+  }, []);
+
+  useEffect(() => {
   const selected = searchParams.get('selected');
   const field = searchParams.get('field');
 
@@ -64,6 +90,23 @@ export default function BorrowPage() {
   }
 }, [searchParams]);
 
+  const saveDraft = () => {
+    sessionStorage.setItem(
+      BORROW_DRAFT_KEY,
+      JSON.stringify({
+        entryName,
+        description,
+        lenderId,
+        amountBorrowed,
+        dateBorrowed,
+        hasInstallments,
+        startDate,
+        paymentFrequency,
+        terms,
+        notes,
+      })
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +214,7 @@ export default function BorrowPage() {
     }
 
     toast({ title: 'Success', description: 'Loan entry created!' });
+    sessionStorage.removeItem(BORROW_DRAFT_KEY);
     navigate('/'); // go back to dashboard
   } catch (err: any) {
     toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -225,7 +269,10 @@ export default function BorrowPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/contacts/select?returnTo=/borrow&field=lender')}
+                onClick={() => {
+                  saveDraft();
+                  navigate('/contacts/select?returnTo=/borrow&field=lender');
+                }}
                 className="w-full h-12 justify-start text-left font-normal"
               >
                 {lenderId 
@@ -344,7 +391,10 @@ export default function BorrowPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  sessionStorage.removeItem(BORROW_DRAFT_KEY);
+                  navigate(-1);
+                }}
                 className="flex-1 h-12"
               >
                 Cancel

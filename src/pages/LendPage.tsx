@@ -22,6 +22,8 @@ export function toLocalDateTime(date: string): string {
   return `${year}-${month}-${day}T00:00:00`;
 }
 
+const LEND_DRAFT_KEY = 'lend_form_draft';
+
 export default function LendPage() {
   const navigate = useNavigate();
   const { persons, addTransaction, addInstallmentPlan } = useApp();
@@ -44,6 +46,30 @@ export default function LendPage() {
   const contacts = persons.filter(p => p.id !== LENDER_ID);
   const [searchParams] = useSearchParams();
 
+  useEffect(() => {
+    const savedDraft = sessionStorage.getItem(LEND_DRAFT_KEY);
+    if (!savedDraft) return;
+
+    try {
+      const draft = JSON.parse(savedDraft);
+      setEntryName(draft.entryName ?? '');
+      setDescription(draft.description ?? '');
+      setBorrowerId(draft.borrowerId ?? '');
+      setAmountBorrowed(draft.amountBorrowed ?? '');
+      setDateBorrowed(draft.dateBorrowed ?? format(new Date(), 'yyyy-MM-dd'));
+      setHasInstallments(Boolean(draft.hasInstallments));
+      setStartDate(draft.startDate ?? '');
+      setPaymentFrequency(draft.paymentFrequency ?? 'MONTHLY');
+      setTerms(draft.terms ?? '');
+      setNotes(draft.notes ?? '');
+    } catch {
+      sessionStorage.removeItem(LEND_DRAFT_KEY);
+      return;
+    }
+
+    sessionStorage.removeItem(LEND_DRAFT_KEY);
+  }, []);
+
   // Get selected contact from URL params
   useEffect(() => {
     const selected = searchParams.get('selected');
@@ -56,6 +82,24 @@ export default function LendPage() {
       }
     }
   }, [searchParams]);
+
+  const saveDraft = () => {
+    sessionStorage.setItem(
+      LEND_DRAFT_KEY,
+      JSON.stringify({
+        entryName,
+        description,
+        borrowerId,
+        amountBorrowed,
+        dateBorrowed,
+        hasInstallments,
+        startDate,
+        paymentFrequency,
+        terms,
+        notes,
+      })
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -165,6 +209,7 @@ export default function LendPage() {
     }
 
     toast({ title: 'Loan entry created successfully' });
+    sessionStorage.removeItem(LEND_DRAFT_KEY);
     navigate('/');
 
   } catch (err: any) {
@@ -225,7 +270,10 @@ export default function LendPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/contacts/select?returnTo=/lend&field=borrower')}
+                onClick={() => {
+                  saveDraft();
+                  navigate('/contacts/select?returnTo=/lend&field=borrower');
+                }}
                 className="w-full h-12 justify-start text-left font-normal"
               >
                 {borrowerId 
@@ -344,7 +392,10 @@ export default function LendPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  sessionStorage.removeItem(LEND_DRAFT_KEY);
+                  navigate(-1);
+                }}
                 className="flex-1 h-12"
               >
                 Cancel
