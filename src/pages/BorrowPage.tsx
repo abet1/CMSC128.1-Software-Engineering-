@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import { TransactionType, PaymentFrequency, InstallmentStatus, TransactionDirection } from '@/types';
 import { calculateNextPaymentDate } from '@/types';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, Send } from 'lucide-react';
 import { format } from 'date-fns';
 
 export function toLocalDateTime(date: string): string {
@@ -39,6 +39,8 @@ export default function BorrowPage() {
   const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>('MONTHLY');
   const [terms, setTerms] = useState('');
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitInFlightRef = useRef(false);
 
   const BORROWER_ID = user?.id ?? '';
 
@@ -110,7 +112,12 @@ export default function BorrowPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitInFlightRef.current) return;
 
+    submitInFlightRef.current = true;
+    setIsSubmitting(true);
+
+  try {
   if (!BORROWER_ID) {
     toast({ title: 'Not authenticated', description: 'Please sign in again.', variant: 'destructive' });
     return;
@@ -138,7 +145,6 @@ export default function BorrowPage() {
       variant: 'destructive' });
   }
 
-  try {
     const resolveCurrentUserPersonId = async (): Promise<string> => {
       const { data: existingByEmail, error: existingError } = await supabase
         .from('persons')
@@ -218,6 +224,10 @@ export default function BorrowPage() {
     navigate('/'); // go back to dashboard
   } catch (err: any) {
     toast({ title: 'Error', description: err.message, variant: 'destructive' });
+  }
+  finally {
+    submitInFlightRef.current = false;
+    setIsSubmitting(false);
   }
 };
 
@@ -399,8 +409,9 @@ export default function BorrowPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1 h-12">
-                Create Entry
+              <Button type="submit" className="flex-1 h-12" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isSubmitting ? 'Creating...' : 'Create Entry'}
               </Button>
             </div>
           </form>
