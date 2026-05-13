@@ -4,6 +4,7 @@ import {
   Person,
   Group,
   Payment,
+  Installment,
   InstallmentPlan,
   PaymentAllocation,
   TransactionType,
@@ -11,6 +12,7 @@ import {
   InstallmentStatus,
   PaymentFrequency,
   generateReferenceId,
+  calculateNextPaymentDate,
   calculateInstallmentStatus,
 } from '@/types';
 import { getDueNotificationsFromData } from '@/utils/notifications';
@@ -63,6 +65,44 @@ interface AppContextType {
   clearNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
 }
+
+const inferInstallmentFrequency = (installments: Installment[]): PaymentFrequency => {
+  const datedInstallments = installments
+    .filter(inst => inst.dueDate)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+  if (datedInstallments.length < 2) return 'MONTHLY';
+
+  const previousDue = new Date(datedInstallments[datedInstallments.length - 2].dueDate);
+  const lastDue = new Date(datedInstallments[datedInstallments.length - 1].dueDate);
+  const daysBetween = Math.round((lastDue.getTime() - previousDue.getTime()) / (1000 * 60 * 60 * 24));
+
+  return daysBetween >= 6 && daysBetween <= 8 ? 'WEEKLY' : 'MONTHLY';
+};
+
+const createReplacementInstallment = (
+  transactionId: string,
+  installments: Installment[],
+  skippedInstallment: Installment
+): Installment => {
+  const maxTermNumber = installments.reduce(
+    (max, inst, index) => Math.max(max, inst.termNumber ?? index + 1),
+    0
+  );
+  const sortedByDueDate = installments
+    .filter(inst => inst.dueDate)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  const lastDueDate = sortedByDueDate[sortedByDueDate.length - 1]?.dueDate ?? skippedInstallment.dueDate;
+
+  return {
+    id: `${transactionId}-term-${maxTermNumber + 1}-${Date.now()}`,
+    termNumber: maxTermNumber + 1,
+    dueDate: calculateNextPaymentDate(lastDueDate, inferInstallmentFrequency(installments)),
+    amountDue: skippedInstallment.amountDue,
+    amountPaid: 0,
+    status: 'UNPAID',
+  };
+};
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -946,13 +986,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const skipInstallment = useCallback((transactionId: string, installmentId: string) => {
+    let replacementInstallment: Installment | null = null;
+
     setInstallmentPlans(prev => prev.map(plan => {
       if (plan.transactionId === transactionId) {
+        const installmentToSkip = plan.installments.find(inst => inst.id === installmentId);
+        if (!installmentToSkip || installmentToSkip.status === 'SKIPPED') return plan;
+
+        replacementInstallment = createReplacementInstallment(
+          transactionId,
+          plan.installments,
+          installmentToSkip
+        );
+
         return {
           ...plan,
-          installments: plan.installments.map(inst =>
-            inst.id === installmentId ? { ...inst, status: 'SKIPPED' as InstallmentStatus } : inst
-          ),
+          installments: [
+            ...plan.installments.map(inst =>
+              inst.id === installmentId ? { ...inst, status: 'SKIPPED' as InstallmentStatus } : inst
+            ),
+            replacementInstallment,
+          ],
         };
       }
       return plan;
@@ -967,11 +1021,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .eq('id', installmentId)
           .eq('owner_user_id', userId);
         if (error) throw error;
+
+        if (!replacementInstallment) return;
+
+        const { data: skippedRow, error: lookupError } = await supabase
+          .from('installments')
+          .select('plan_id')
+          .eq('id', installmentId)
+          .eq('owner_user_id', userId)
+          .single();
+        if (lookupError) throw lookupError;
+        if (!skippedRow?.plan_id) return;
+
+        const { error: insertError } = await supabase
+          .from('installments')
+          .insert({
+            owner_user_id: userId,
+            plan_id: skippedRow.plan_id,
+            term_number: replacementInstallment.termNumber,
+            due_date: replacementInstallment.dueDate,
+            amount_due: Number(replacementInstallment.amountDue ?? 0),
+            amount_paid: 0,
+            status: replacementInstallment.status,
+            paid_date: null,
+          });
+        if (insertError) throw insertError;
+
+        await fetchInstallmentPlansFromSupabase();
       } catch (error) {
         console.error('Failed to persist skipped installment in Supabase:', error);
       }
     })();
-  }, [getCurrentUserId]);
+  }, [getCurrentUserId, fetchInstallmentPlansFromSupabase]);
 
   // Payment Allocation
   const addPaymentAllocation = useCallback((allocationData: Omit<PaymentAllocation, 'id'>): PaymentAllocation => {
