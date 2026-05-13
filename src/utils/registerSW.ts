@@ -5,7 +5,7 @@ export function registerServiceWorker() {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((registration) => {
-          console.log('PayMama PWA: Service Worker registered successfully');
+          console.log('PayMamaya PWA: Service Worker registered successfully');
           
           // Check for updates periodically
           registration.addEventListener('updatefound', () => {
@@ -14,7 +14,7 @@ export function registerServiceWorker() {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   // New service worker available, notify user
-                  console.log('PayMama PWA: New version available');
+                  console.log('PayMamaya PWA: New version available');
                 }
               });
             }
@@ -26,11 +26,11 @@ export function registerServiceWorker() {
           }, 60 * 60 * 1000);
         })
         .catch((error) => {
-          console.error('PayMama PWA: Service Worker registration failed:', error);
+          console.error('PayMamaya PWA: Service Worker registration failed:', error);
         });
     });
   } else if (!import.meta.env.PROD) {
-    console.log('PayMama PWA: Service Worker disabled in development mode');
+    console.log('PayMamaya PWA: Service Worker disabled in development mode');
   }
 }
 

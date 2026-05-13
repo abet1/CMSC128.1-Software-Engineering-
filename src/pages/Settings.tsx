@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, ChevronRight, HelpCircle, LogOut, Palette, Shield } from 'lucide-react';
+import { Bell, Check, ChevronRight, HelpCircle, LogOut, Moon, Palette, Shield, Sun } from 'lucide-react';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
+import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { isSelfPerson } from '@/lib/people';
@@ -29,6 +30,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const { user, signOut, updateProfileName } = useAuth();
   const { persons, updatePerson } = useApp();
+  const { isLightTheme, setTheme } = useTheme();
   const { toast } = useToast();
   const fallbackName = user?.name ?? 'Guest';
   const [preferences, setPreferences] = useState<PreferenceState>(() => defaultPreferences(fallbackName));
@@ -147,6 +149,13 @@ const Settings = () => {
           </section>
 
           <section className="rounded-2xl border border-border bg-card divide-y divide-border">
+            <SettingToggle
+              icon={isLightTheme ? Sun : Moon}
+              title="Light Theme"
+              description={isLightTheme ? 'Light colors are active across the app' : 'Dark colors are active by default'}
+              checked={isLightTheme}
+              onCheckedChange={checked => setTheme(checked ? 'light' : 'dark')}
+            />
             <SettingToggle
               icon={Bell}
               title="Notifications"

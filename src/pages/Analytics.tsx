@@ -1,6 +1,7 @@
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AppLayout } from '@/components/AppLayout';
 import { useApp } from '@/context/AppContext';
+import { useTheme } from '@/hooks/useTheme';
 import { formatCurrencyCompact, personFullName } from '@/types';
 
 // ── Data derivations ──────────────────────────────────────────────────────────
@@ -19,9 +20,6 @@ function paymentsOverTime(payments: any[]) {
   });
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  PAID: '#79e19b', PARTIALLY_PAID: '#f59e0b', UNPAID: '#6b7280', OVERDUE: '#f87171',
-};
 const STATUS_LABELS: Record<string, string> = {
   PAID: 'Paid', PARTIALLY_PAID: 'Partial', UNPAID: 'Unpaid', OVERDUE: 'Overdue',
 };
@@ -70,11 +68,23 @@ function receivablesVsPayables(transactions: any[]) {
   ];
 }
 
-const tooltip = {
-  contentStyle: { backgroundColor: '#181d24', border: '1px solid #2a3140', borderRadius: '8px', fontSize: 12 },
-  labelStyle: { color: '#e5e5e5' },
-  itemStyle: { color: '#79e19b' },
-};
+function cssColor(variableName: string, fallback: string) {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+  return value ? `hsl(${value})` : fallback;
+}
+
+function chartColors() {
+  return {
+    primary: cssColor('--primary', '#79e19b'),
+    foreground: cssColor('--foreground', '#e5e5e5'),
+    mutedForeground: cssColor('--muted-foreground', '#6b7280'),
+    card: cssColor('--card', '#181d24'),
+    border: cssColor('--border', '#2a3140'),
+    warning: cssColor('--warning', '#f59e0b'),
+    destructive: cssColor('--destructive', '#f87171'),
+  };
+}
 
 function ChartCard({ title, sub, children }: { title: string; sub: string; children: React.ReactNode }) {
   return (
@@ -88,10 +98,23 @@ function ChartCard({ title, sub, children }: { title: string; sub: string; child
 
 export default function Analytics() {
   const { transactions, payments, persons } = useApp();
+  const { theme } = useTheme();
   const timeData    = paymentsOverTime(payments);
   const statusData  = loanStatusData(transactions);
   const topPeople   = topPeopleData(transactions, persons);
   const rvpData     = receivablesVsPayables(transactions);
+  const colors = chartColors();
+  const statusColors: Record<string, string> = {
+    PAID: colors.primary,
+    PARTIALLY_PAID: colors.warning,
+    UNPAID: colors.mutedForeground,
+    OVERDUE: colors.destructive,
+  };
+  const tooltip = {
+    contentStyle: { backgroundColor: colors.card, border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: 12 },
+    labelStyle: { color: colors.foreground },
+    itemStyle: { color: colors.primary },
+  };
 
   const totalLent = transactions
     .filter(t => t.transactionType === 'LEND')
@@ -132,15 +155,15 @@ export default function Analytics() {
                 <AreaChart data={timeData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                   <defs>
                     <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#79e19b" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#79e19b" stopOpacity={0} />
+                      <stop offset="5%"  stopColor={colors.primary} stopOpacity={theme === 'light' ? 0.18 : 0.25} />
+                      <stop offset="95%" stopColor={colors.primary} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2a3140" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+                  <XAxis dataKey="month" tick={{ fill: colors.mutedForeground, fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: colors.mutedForeground, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
                   <Tooltip {...tooltip} formatter={(v: number) => [formatCurrencyCompact(v), 'Collected']} />
-                  <Area type="monotone" dataKey="amount" stroke="#79e19b" strokeWidth={2} fill="url(#areaGrad)" dot={false} activeDot={{ r: 4, fill: '#79e19b' }} />
+                  <Area type="monotone" dataKey="amount" stroke={colors.primary} strokeWidth={2} fill="url(#areaGrad)" dot={false} activeDot={{ r: 4, fill: colors.primary }} />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -151,7 +174,7 @@ export default function Analytics() {
               <ResponsiveContainer width="100%" height={140}>
                 <PieChart>
                   <Pie data={statusData} cx="50%" cy="50%" innerRadius={38} outerRadius={60} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                    {statusData.map(e => <Cell key={e.name} fill={STATUS_COLORS[e.name] ?? '#6b7280'} />)}
+                    {statusData.map(e => <Cell key={e.name} fill={statusColors[e.name] ?? colors.mutedForeground} />)}
                   </Pie>
                   <Tooltip {...tooltip} formatter={(v: number, name: string) => [v, STATUS_LABELS[name] ?? name]} />
                 </PieChart>
@@ -159,7 +182,7 @@ export default function Analytics() {
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2">
                 {statusData.map(s => (
                   <div key={s.name} className="flex items-center gap-1.5 min-w-0">
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_COLORS[s.name] }} />
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: statusColors[s.name] }} />
                     <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
                       {s.label} <span className="text-foreground font-medium">{s.value}</span>
                     </span>
@@ -175,11 +198,11 @@ export default function Analytics() {
           <ChartCard title="Top Borrowers" sub="By total amount lent">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={topPeople} layout="vertical" margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3140" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
+                <CartesianGrid strokeDasharray="3 3" stroke={colors.border} horizontal={false} />
+                <XAxis type="number" tick={{ fill: colors.mutedForeground, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="name" tick={{ fill: colors.mutedForeground, fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip {...tooltip} formatter={(v: number) => [formatCurrencyCompact(v), 'Total Lent']} />
-                <Bar dataKey="amount" fill="#79e19b" radius={[0, 4, 4, 0] as any} maxBarSize={18} />
+                <Bar dataKey="amount" fill={colors.primary} radius={[0, 4, 4, 0] as any} maxBarSize={18} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -187,13 +210,13 @@ export default function Analytics() {
           <ChartCard title="Receivables vs Payables" sub="Outstanding balances">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={rvpData} margin={{ top: 0, right: 4, left: -24, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3140" vertical={false} />
-                <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: colors.mutedForeground, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: colors.mutedForeground, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
                 <Tooltip {...tooltip} formatter={(v: number) => [formatCurrencyCompact(v), 'Amount']} />
                 <Bar dataKey="amount" radius={[4, 4, 0, 0] as any} maxBarSize={48}>
-                  <Cell fill="#79e19b" />
-                  <Cell fill="#f87171" />
+                  <Cell fill={colors.primary} />
+                  <Cell fill={colors.destructive} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

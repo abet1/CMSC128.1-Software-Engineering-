@@ -5,8 +5,8 @@ export function LoadingScreen() {
         {/* Logo */}
         <div className="relative">
           <img 
-            src="/PayMama.png" 
-            alt="PayMama" 
+            src="/PayMamaya.png" 
+            alt="PayMamaya" 
             className="w-56 h-56 lg:w-64 lg:h-64 object-contain animate-pulse"
           />
         </div>

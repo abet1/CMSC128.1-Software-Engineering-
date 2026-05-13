@@ -7,6 +7,7 @@ import { ReactNode } from 'react';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 
 import LoginPage             from './pages/LoginPage';
 import Index                 from './pages/Index';
@@ -88,13 +89,15 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster richColors position="top-right" />
         <BrowserRouter>
-          <AuthProvider>
-            <AppProvider>
-              <AppRoutes />
-            </AppProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <Toaster richColors position="top-right" />
+            <AuthProvider>
+              <AppProvider>
+                <AppRoutes />
+              </AppProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

@@ -1,10 +1,10 @@
-# PayMama
+# PayMamaya
 
 **CMSC 127 Machine Problem**
 
-A modern Progressive Web App (PWA) for tracking and managing loans, expenses, and financial transactions. PayMama helps you keep track of money you've lent, borrowed, and group expenses with an intuitive, mobile-first interface.
+A modern Progressive Web App (PWA) for tracking and managing loans, expenses, and financial transactions. PayMamaya helps you keep track of money you've lent, borrowed, and group expenses with an intuitive, mobile-first interface.
 
-![PayMama](https://img.shields.io/badge/PWA-enabled-0d9488?style=for-the-badge&logo=pwa&logoColor=white)
+![PayMamaya](https://img.shields.io/badge/PWA-enabled-0d9488?style=for-the-badge&logo=pwa&logoColor=white)
 ![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.4.19-646CFF?style=for-the-badge&logo=vite&logoColor=white)
@@ -300,7 +300,7 @@ loan-tracker-cs127/
 
 ## 📱 PWA Support
 
-PayMama is a fully functional Progressive Web App with:
+PayMamaya is a fully functional Progressive Web App with:
 
 ### Features
 - **Installable** - Can be installed on mobile and desktop
@@ -311,7 +311,7 @@ PayMama is a fully functional Progressive Web App with:
 
 ### Installation
 
-Users can install PayMama:
+Users can install PayMamaya:
 - **Mobile**: Through browser "Add to Home Screen" prompt
 - **Desktop**: Through browser install button
 - **Automatic Prompt**: App shows install prompt when supported
@@ -327,7 +327,7 @@ The service worker (`/public/sw.js`) provides:
 ### Manifest
 
 The PWA manifest (`/public/manifest.webmanifest`) includes:
-- App name: "PayMama"
+- App name: "PayMamaya"
 - Display mode: Standalone
 - Theme color: #0d9488
 - Orientation: Portrait primary
@@ -368,7 +368,7 @@ This serves the production build locally for testing.
 
 ### Static Hosting Providers
 
-PayMama can be deployed to any static hosting service:
+PayMamaya can be deployed to any static hosting service:
 
 #### Vercel
 ```bash

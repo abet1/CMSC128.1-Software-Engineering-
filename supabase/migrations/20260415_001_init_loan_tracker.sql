@@ -1,4 +1,4 @@
--- PayMama / Loan Tracker - Supabase initial schema
+-- PayMamaya / Loan Tracker - Supabase initial schema
 -- Execute in Supabase SQL editor or via supabase migrations.
 
 create extension if not exists "pgcrypto";

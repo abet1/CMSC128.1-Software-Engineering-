@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    color-scheme: dark;
     /* ── Dark slate theme — cool blue-black base, #79e19b emerald accent ── */
 
     --background: 220 14% 8%;           /* #0f1217 — cool dark base */
@@ -56,6 +57,56 @@
     --sidebar-accent-foreground: 210 20% 94%;
     --sidebar-border: 220 15% 13%;
     --sidebar-ring: 140 64% 68%;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+
+    --background: 150 24% 97%;
+    --foreground: 220 20% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 13%;
+
+    --primary: 145 54% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 16% 92%;
+    --secondary-foreground: 220 16% 25%;
+
+    --muted: 150 14% 93%;
+    --muted-foreground: 220 9% 43%;
+
+    --accent: 145 54% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 47%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 54% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 46%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 150 12% 86%;
+    --input: 150 12% 86%;
+    --ring: 145 54% 40%;
+
+    --surface: 150 22% 95%;
+    --surface-elevated: 0 0% 100%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 9% 38%;
+    --sidebar-primary: 145 54% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 16% 93%;
+    --sidebar-accent-foreground: 220 20% 13%;
+    --sidebar-border: 150 12% 86%;
+    --sidebar-ring: 145 54% 40%;
   }
 }
 

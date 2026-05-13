@@ -76,9 +76,9 @@ export function PWAInstallPrompt() {
       <div className="bg-card border-2 border-primary/30 rounded-2xl p-4 shadow-lg backdrop-blur-xl">
         <div className="flex items-start gap-3">
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground mb-1">Install PayMama</h3>
+            <h3 className="font-semibold text-foreground mb-1">Install PayMamaya</h3>
             <p className="text-sm text-muted-foreground mb-3">
-              Add PayMama to your home screen for quick access and offline support.
+              Add PayMamaya to your home screen for quick access and offline support.
             </p>
             <div className="flex items-center gap-2">
               <button

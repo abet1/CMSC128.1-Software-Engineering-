@@ -1,5 +1,5 @@
-// Service Worker for PayMama PWA
-const CACHE_NAME = 'paymama-v1';
+// Service Worker for PayMamaya PWA
+const CACHE_NAME = 'paymamaya-v1';
 const urlsToCache = [
   '/',
   '/index.html',
